@@ -71,6 +71,10 @@ impl Channel {
             .header("x-handle", handle)
             .send()
             .await?;
+        if res.status() == 404 {
+            return Err(eyre::eyre!("Channel with handle '{handle}' not found!"));
+        }
+
         let res_json: Value = res.json().await?;
         let channel_id = res_json["channel_id"].as_str().unwrap();
         let channel_name = res_json["channel_name"].as_str().unwrap();

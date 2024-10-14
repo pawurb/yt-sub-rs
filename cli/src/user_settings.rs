@@ -58,7 +58,10 @@ impl UserSettings {
         let path = path.unwrap_or(&default_path);
 
         if !Path::new(path).exists() {
-            return Err(eyre!("Config file at '{}' does not exist!", path.display()));
+            return Err(eyre!(
+                "Config file at '{}' does not exist! Run 'ytsub init' to initialize it.",
+                path.display()
+            ));
         }
         let mut settings: Self = toml::from_str(&std::fs::read_to_string(path)?)?;
         settings.path = path.clone();
