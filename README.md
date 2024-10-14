@@ -107,7 +107,7 @@ webhook_url = "https://hooks.slack.com/services/XXX/XXX/XXX"
 channel = "yt-videos"
 ```
 
-![Slack notification](https://github.com/pawurb/yt-sub-rs/raw/main/slack-notification.png)
+![Slack notification](https://github.com/pawurb/yt-sub-rs/raw/main/slack-notification2.png)
 
 You can obtain the `webhook_url` value as described [in the Slack docs](https://api.slack.com/messaging/webhooks).
 
