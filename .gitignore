@@ -1,0 +1,5 @@
+workers/*/target
+workers/*/wrangler.toml
+workers/*/.wrangler  
+cli/target
+*/wrangler.toml
