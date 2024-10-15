@@ -1,12 +1,41 @@
+use kv::KvStore;
 use serde_json::{json, Value};
 use worker::*;
 
 #[event(fetch)]
-async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
-    let handle = req.headers().get("x-handle").unwrap().unwrap();
+async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let youtube_api_key = env
         .var("YOUTUBE_API_KEY")
         .expect("Missing YOUTUBE_API_KEY env var");
+    let youtube_api_key = format!("{youtube_api_key}");
+    let kv = env.kv("users")?;
+
+    Router::new()
+        .get_async("/channel_data", |req, _ctx| {
+            let youtube_api_key = youtube_api_key.clone();
+            async move { channel_data(req, youtube_api_key).await }
+        })
+        .get_async("/register", |_req, _ctx| {
+            let kv = kv.clone();
+            async move { register(kv).await }
+        })
+        .run(req, env)
+        .await
+}
+
+pub async fn register(kv: KvStore) -> Result<Response> {
+    let visits = kv.get("count").text().await?.unwrap_or("0".to_string());
+    let visits = visits.parse::<i32>().unwrap_or(0) + 1;
+    let _ = kv.put("count", visits.to_string())?.execute().await;
+    Response::ok(format!("Tick: {visits}"))
+}
+
+pub async fn channel_data(req: Request, youtube_api_key: String) -> Result<Response> {
+    let handle = match req.headers().get("x-handle") {
+        Ok(Some(handle)) => handle,
+        _ => return Response::error("Missing x-handle header", 400),
+    };
+
     let mut rss_req = Request::new(
         &format!("https://www.googleapis.com/youtube/v3/channels?key={}&forHandle={}&part=snippet,id&order=date&maxResults=1", youtube_api_key, handle),
         Method::Get,

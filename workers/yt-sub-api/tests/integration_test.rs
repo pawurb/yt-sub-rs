@@ -18,7 +18,7 @@ async fn test_get_channel_data() {
 }
 
 #[tokio::test]
-async fn test_get_invalid_channel_data() {
+async fn test_invalid_channel_data() {
     let client = Client::new();
     let res = client
         .get("https://yt-sub-api.apki.workers.dev/channel_data")
@@ -27,4 +27,15 @@ async fn test_get_invalid_channel_data() {
         .await
         .expect("Failed to send request");
     assert_eq!(res.status(), 404);
+}
+
+#[tokio::test]
+async fn test_missing_handle() {
+    let client = Client::new();
+    let res = client
+        .get("https://yt-sub-api.apki.workers.dev/channel_data")
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(res.status(), 400);
 }
