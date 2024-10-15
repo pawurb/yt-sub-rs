@@ -24,7 +24,7 @@ impl ChannelDataArgs {
 
 Run: 
 
-sub follow --handle {handle} --channel-id {channel_id} --desc '{channel_name}'
+ytsub follow --handle {handle} --channel-id {channel_id} --desc '{channel_name}'
 
 to subscribe to this channel.",
             handle = channel.handle,
