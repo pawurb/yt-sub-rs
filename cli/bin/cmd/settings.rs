@@ -1,7 +1,7 @@
 use clap::Parser;
 use eyre::Result;
 use std::path::PathBuf;
-use yt_sub::UserSettings;
+use yt_sub_core::UserSettings;
 
 #[derive(Debug, Parser)]
 pub struct SettingsArgs {

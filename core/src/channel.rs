@@ -6,10 +6,9 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::video::Video;
+use crate::{user_settings::API_HOST, video::Video};
 
 const RSS_HOST: &str = "https://www.youtube.com";
-const CHANNEL_DATA_HOST: &str = "https://yt-sub-api.apki.workers.dev";
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Channel {
@@ -63,7 +62,7 @@ impl Channel {
     }
 
     pub async fn get_data(handle: &str, host: Option<&str>) -> Result<(String, String)> {
-        let host = host.unwrap_or(CHANNEL_DATA_HOST);
+        let host = host.unwrap_or(API_HOST);
         let client = Client::new();
 
         let res = client
@@ -72,7 +71,16 @@ impl Channel {
             .send()
             .await?;
         if res.status() == 404 {
-            return Err(eyre::eyre!("Channel with handle '{handle}' not found!"));
+            eyre::bail!("Channel with handle '{handle}' not found!")
+        }
+
+        if res.status() == 503 {
+            eyre::bail!(
+                "It looks like YouTube API calls are currently throttled.
+
+You can try again later or find the channel data manually:
+https://github.com/pawurb/yt-sub-rs#manually-finding-an-rss-channel_id"
+            );
         }
 
         let res_json: Value = res.json().await?;

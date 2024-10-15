@@ -6,38 +6,29 @@ use serde_json::json;
 use crate::logger::Logger;
 
 #[non_exhaustive]
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum Notifier {
-    Log(LogConfig),
+    Log(),
     Slack(SlackConfig),
     Telegram,
 }
 
 impl Default for Notifier {
     fn default() -> Self {
-        Self::Log(LogConfig { notify: true })
+        Self::Log()
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub struct LogConfig {
-    notify: bool,
-}
-
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct SlackConfig {
-    webhook_url: String,
-    channel: String,
+    pub webhook_url: String,
+    pub channel: String,
 }
 
 impl Notifier {
     pub async fn notify(&self, messages: Vec<String>, cron: bool) -> Result<()> {
         match self {
-            Notifier::Log(log_config) => {
-                if !log_config.notify {
-                    return Ok(());
-                }
-
+            Notifier::Log() => {
                 let logger = Logger::new(cron);
                 for message in messages {
                     logger.info(&message);
@@ -50,6 +41,10 @@ impl Notifier {
             }
             Notifier::Telegram => todo!(),
         }
+    }
+
+    pub fn is_slack(&self) -> bool {
+        matches!(self, Notifier::Slack(_))
     }
 }
 
@@ -64,7 +59,16 @@ async fn notify_slack(message: &str, config: &SlackConfig) -> Result<()> {
         "unfurl_links": false,
     });
 
-    let _ = client.post(&config.webhook_url).json(&payload).send().await;
+    let res = client
+        .post(&config.webhook_url)
+        .json(&payload)
+        .send()
+        .await?;
 
-    Ok(())
+    if res.status() == 200 {
+        return Ok(());
+    }
+
+    let err_msg = res.text().await?;
+    eyre::bail!("Failed to send message to Slack: {err_msg}");
 }

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use eyre::Result;
-use yt_sub::{channel::Channel, user_settings::UserSettings};
+use yt_sub_core::{channel::Channel, UserSettings};
 
 #[derive(Debug, Parser)]
 pub struct FollowArgs {

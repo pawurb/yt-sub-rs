@@ -11,9 +11,11 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let kv = env.kv("users")?;
 
     Router::new()
-        .get_async("/channel_data", |req, _ctx| {
+        .get_async("/channel_data/:handle", |_req, ctx| {
+            let handle = ctx.param("handle").cloned();
+
             let youtube_api_key = youtube_api_key.clone();
-            async move { channel_data(req, youtube_api_key).await }
+            async move { channel_data(handle, youtube_api_key).await }
         })
         .get_async("/register", |_req, _ctx| {
             let kv = kv.clone();
@@ -30,10 +32,10 @@ pub async fn register(kv: KvStore) -> Result<Response> {
     Response::ok(format!("Tick: {visits}"))
 }
 
-pub async fn channel_data(req: Request, youtube_api_key: String) -> Result<Response> {
-    let handle = match req.headers().get("x-handle") {
-        Ok(Some(handle)) => handle,
-        _ => return Response::error("Missing x-handle header", 400),
+pub async fn channel_data(handle: Option<String>, youtube_api_key: String) -> Result<Response> {
+    let handle = match handle {
+        Some(handle) => handle,
+        None => return Response::error("Missing handle", 400),
     };
 
     let mut rss_req = Request::new(
