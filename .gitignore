@@ -2,4 +2,5 @@ workers/*/target
 workers/*/wrangler.toml
 workers/*/.wrangler  
 cli/target
+core/target
 */wrangler.toml

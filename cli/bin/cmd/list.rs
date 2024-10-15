@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use eyre::Result;
-use yt_sub::user_settings::UserSettings;
+use yt_sub_core::UserSettings;
 
 #[derive(Debug, Parser)]
 pub struct ListArgs {
@@ -40,6 +40,3 @@ impl ListArgs {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {}

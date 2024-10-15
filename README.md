@@ -42,9 +42,7 @@ channels = []
 last_run_at_path = "~/.yt-sub-rs/last_run_at.txt"
 
 [[notifiers]]
-
-[notifiers.Log]
-notify = true
+Log = []
 ```
 
 Follow preferred channels based on [their URL handle](https://www.youtube.com/@ManofRecaps):
@@ -107,7 +105,7 @@ webhook_url = "https://hooks.slack.com/services/XXX/XXX/XXX"
 channel = "yt-videos"
 ```
 
-![Slack notification](https://github.com/pawurb/yt-sub-rs/raw/main/slack-notification2.png)
+![Slack notification](https://github.com/pawurb/yt-sub-rs/raw/main/assets/slack-notification.png)
 
 You can obtain the `webhook_url` value as described [in the Slack docs](https://api.slack.com/messaging/webhooks).
 
@@ -120,7 +118,7 @@ document.querySelector('link[rel="alternate"][type="application/rss+xml"]').href
 ```
 This snippet works on Firefox. Alternatively, you can look for this value manually in the source code: 
 
-![RSS feed](https://github.com/pawurb/yt-sub-rs/raw/main/youtube-rss.png)
+![RSS feed](https://github.com/pawurb/yt-sub-rs/raw/main/assets/youtube-rss.png)
 
 Now you can subscribe by providing all the data like this:
 

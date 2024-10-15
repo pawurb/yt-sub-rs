@@ -1,5 +1,5 @@
 use chrono::{DateTime, Duration, Utc};
-use eyre::{eyre, Result};
+use eyre::Result;
 use home::home_dir;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -9,15 +9,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{channel::Channel, notifier::Notifier};
+use crate::{
+    channel::Channel,
+    notifier::{Notifier, SlackConfig},
+};
+pub const API_HOST: &str = "https://yt-sub-api.apki.workers.dev";
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct UserSettings {
     pub channels: Vec<Channel>,
     pub notifiers: Vec<Notifier>,
+    pub api_key: Option<String>,
     #[serde(skip_serializing, skip_deserializing)]
     pub path: PathBuf,
-    pub last_run_at_path: PathBuf,
 }
 
 impl Display for UserSettings {
@@ -33,7 +37,7 @@ impl UserSettings {
             path,
             notifiers: vec![Notifier::default()],
             channels: vec![],
-            last_run_at_path: home_dir().unwrap().join(".yt-sub-rs/last_run_at.txt"),
+            api_key: None,
         }
     }
 
@@ -41,10 +45,10 @@ impl UserSettings {
         let default_path = Self::default_path();
         let path = path.unwrap_or(&default_path);
         if Path::new(path).exists() {
-            return Err(eyre!(
+            eyre::bail!(
                 "Config file at '{}' is already initialized!",
                 path.display()
-            ));
+            );
         }
 
         let settings = Self::default(path.clone());
@@ -58,10 +62,10 @@ impl UserSettings {
         let path = path.unwrap_or(&default_path);
 
         if !Path::new(path).exists() {
-            return Err(eyre!(
+            eyre::bail!(
                 "Config file at '{}' does not exist! Run 'ytsub init' to initialize it.",
                 path.display()
-            ));
+            )
         }
         let mut settings: Self = toml::from_str(&std::fs::read_to_string(path)?)?;
         settings.path = path.clone();
@@ -89,9 +93,10 @@ impl UserSettings {
     }
 
     pub fn get_last_run_at(&self) -> DateTime<Utc> {
-        if Path::new(&self.last_run_at_path).exists() {
-            let last_run_at = std::fs::read_to_string(&self.last_run_at_path)
-                .expect("Failed to read last_run_at file");
+        let path = home_dir().unwrap().join(".yt-sub-rs/last_run_at.txt");
+        if Path::new(&path).exists() {
+            let last_run_at =
+                std::fs::read_to_string(&self.path).expect("Failed to read last_run_at file");
             DateTime::parse_from_rfc3339(&last_run_at)
                 .expect("Failed to parse last_run_at file")
                 .with_timezone(&Utc)
@@ -101,11 +106,12 @@ impl UserSettings {
     }
 
     pub fn update_last_run_at(&self) -> Result<()> {
+        let last_run_at_path = last_run_at_path();
         let last_run_at = Utc::now().to_rfc3339();
-        if let Some(parent) = Path::new(&self.last_run_at_path).parent() {
+        if let Some(parent) = Path::new(&last_run_at_path).parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let mut file = File::create(&self.last_run_at_path)?;
+        let mut file = File::create(last_run_at_path)?;
         file.write_all(last_run_at.as_bytes())?;
         Ok(())
     }
@@ -123,6 +129,19 @@ impl UserSettings {
             .find(|channel| channel.handle == handle)
             .cloned()
     }
+
+    pub fn get_slack_config(&self) -> Option<&SlackConfig> {
+        let notifier = self.notifiers.iter().find(|n| n.is_slack());
+
+        match notifier {
+            Some(Notifier::Slack(config)) => Some(config),
+            _ => None,
+        }
+    }
+}
+
+fn last_run_at_path() -> PathBuf {
+    home_dir().unwrap().join(".yt-sub-rs/last_run_at.txt")
 }
 
 #[cfg(test)]
@@ -158,18 +177,26 @@ mod tests {
         let _cl = Cleaner { path: path.clone() };
         let settings = UserSettings::init(Some(&path))?;
 
-        let run_at_path = home_dir().unwrap().join(".yt-sub-rs/other_last_run_at.txt");
+        assert_eq!(settings.channels.len(), 0);
+
+        let channel = Channel {
+            channel_id: "CHANNEL_ID".to_string(),
+            handle: "CHANNEL_HANDLE".to_string(),
+            description: "CHANNEL_DESC".to_string(),
+        };
+
+        let mut channels = settings.channels.clone();
+        channels.extend(vec![channel]);
 
         let settings = UserSettings {
-            last_run_at_path: run_at_path.clone(),
+            channels,
             ..settings
         };
 
         settings.sync(Some(&path))?;
 
         let updated = UserSettings::read(Some(&path))?;
-
-        assert_eq!(updated.last_run_at_path, run_at_path);
+        assert_eq!(updated.channels.len(), 1);
 
         Ok(())
     }

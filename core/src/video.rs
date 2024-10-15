@@ -41,7 +41,7 @@ impl Video {
 
     pub fn notification_text(&self, notifier: &Notifier) -> String {
         match notifier {
-            Notifier::Log(_) => {
+            Notifier::Log() => {
                 format!("New video - {} {} {}", self.channel, self.title, self.link)
             }
             Notifier::Slack(_) => {

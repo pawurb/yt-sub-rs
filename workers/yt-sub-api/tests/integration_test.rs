@@ -5,8 +5,7 @@ use serde_json::Value;
 async fn test_get_channel_data() {
     let client = Client::new();
     let res = client
-        .get("https://yt-sub-api.apki.workers.dev/channel_data")
-        .header("x-handle", "@ManOfRecaps")
+        .get("https://yt-sub-api.apki.workers.dev/channel_data/@ManOfRecaps")
         .send()
         .await
         .expect("Failed to send request");
@@ -21,8 +20,7 @@ async fn test_get_channel_data() {
 async fn test_invalid_channel_data() {
     let client = Client::new();
     let res = client
-        .get("https://yt-sub-api.apki.workers.dev/channel_data")
-        .header("x-handle", "@kljjfadslufd")
+        .get("https://yt-sub-api.apki.workers.dev/channel_data/@kljjfadslufd")
         .send()
         .await
         .expect("Failed to send request");
@@ -37,5 +35,5 @@ async fn test_missing_handle() {
         .send()
         .await
         .expect("Failed to send request");
-    assert_eq!(res.status(), 400);
+    assert_eq!(res.status(), 404);
 }

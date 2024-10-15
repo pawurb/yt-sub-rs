@@ -1,6 +1,6 @@
 use clap::Parser;
 use eyre::Result;
-use yt_sub::channel::Channel;
+use yt_sub_core::channel::Channel;
 
 #[derive(Debug, Parser)]
 pub struct ChannelDataArgs {
