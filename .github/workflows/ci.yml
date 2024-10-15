@@ -24,19 +24,35 @@ jobs:
           rustup component add rustfmt
           rustup component add clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Check
+      - name: Check 'cli'
         run: | 
           cd cli
           cargo check 
-      - name: Fmt
+      - name: Fmt 'cli'
         run: |
           cd cli
           cargo fmt --all --check
-      - name: Lint
+      - name: Lint 'cli'
         run: |
           cd cli
           cargo clippy --all --all-features -- -D warnings
-      - name: Run tests 
+      - name: Run tests 'cli'
         run: | 
           cd cli
+          cargo test
+      - name: Check 'yt-sub-api'
+        run: | 
+          cd workers/yt-sub-api
+          cargo check 
+      - name: Fmt 'yt-sub-api'
+        run: |
+          cd workers/yt-sub-api
+          cargo fmt --all --check
+      - name: Lint 'yt-sub-api'
+        run: |
+          cd workers/yt-sub-api
+          cargo clippy --all --all-features -- -D warnings
+      - name: Run tests 'yt-sub-api'
+        run: | 
+          cd workers/yt-sub-api
           cargo test

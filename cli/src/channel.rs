@@ -9,7 +9,7 @@ use serde_json::Value;
 use crate::video::Video;
 
 const RSS_HOST: &str = "https://www.youtube.com";
-const CHANNEL_DATA_HOST: &str = "https://yt-channel-data.apki.workers.dev";
+const CHANNEL_DATA_HOST: &str = "https://yt-sub-api.apki.workers.dev";
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Channel {
