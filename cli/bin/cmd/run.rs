@@ -2,6 +2,7 @@ use chrono::Utc;
 use clap::Parser;
 use eyre::Result;
 use std::path::PathBuf;
+use yt_sub::user_settings_cli::UserSettingsCLI;
 use yt_sub_core::{logger::Logger, UserSettings};
 
 #[derive(Debug, Parser)]
@@ -48,6 +49,11 @@ impl RunArgs {
                     logger.error(&format!("Error: {e}"));
                 }
             }
+        }
+
+        if new_videos.is_empty() {
+            logger.info("No new videos found.");
+            return Ok(());
         }
 
         for notifier in &settings.notifiers {
