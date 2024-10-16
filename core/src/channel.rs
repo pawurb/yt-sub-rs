@@ -144,7 +144,6 @@ mod tests {
         Ok(())
     }
 
-    // TODO add spec for fetching channel data failed
     #[tokio::test]
     async fn test_get_channel_data() -> Result<()> {
         let mut server = Server::new_async().await;

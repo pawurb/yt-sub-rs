@@ -4,10 +4,8 @@ use std::{
     path::PathBuf,
 };
 
-use crate::{
-    channel::Channel,
-    notifier::{Notifier, SlackConfig},
-};
+use crate::{channel::Channel, notifier::Notifier};
+
 pub const API_HOST: &str = "https://yt-sub-api.apki.workers.dev";
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -50,12 +48,23 @@ impl UserSettings {
             .cloned()
     }
 
-    pub fn get_slack_config(&self) -> Option<&SlackConfig> {
-        let notifier = self.notifiers.iter().find(|n| n.is_slack());
+    pub fn get_slack_notifier(&self) -> Option<&Notifier> {
+        self.notifiers.iter().find(|n| n.is_slack())
+    }
+}
 
-        match notifier {
-            Some(Notifier::Slack(config)) => Some(config),
-            _ => None,
-        }
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use eyre::Result;
+    #[tokio::test]
+    async fn test_json_serialize() -> Result<()> {
+        let setting = UserSettings::default(PathBuf::from("test.toml"));
+        let json = serde_json::to_string(&setting)?;
+
+        let _setting: UserSettings = serde_json::from_str(&json)?;
+
+        Ok(())
     }
 }

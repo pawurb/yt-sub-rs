@@ -1,6 +1,9 @@
+mod registration;
 use kv::KvStore;
+use registration::register_user;
 use serde_json::{json, Value};
 use worker::*;
+use yt_sub_core::UserSettings;
 
 #[event(fetch)]
 async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
@@ -17,19 +20,36 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let youtube_api_key = youtube_api_key.clone();
             async move { channel_data(handle, youtube_api_key).await }
         })
-        .get_async("/register", |_req, _ctx| {
-            let kv = kv.clone();
-            async move { register(kv).await }
+        .post_async("/register", |req, _ctx| {
+            let mut kv = kv.clone();
+            async move { register(req, &mut kv).await }
         })
         .run(req, env)
         .await
 }
 
-pub async fn register(kv: KvStore) -> Result<Response> {
-    let visits = kv.get("count").text().await?.unwrap_or("0".to_string());
-    let visits = visits.parse::<i32>().unwrap_or(0) + 1;
-    let _ = kv.put("count", visits.to_string())?.execute().await;
-    Response::ok(format!("Tick: {visits}"))
+pub async fn register(req: Request, kv: &mut KvStore) -> Result<Response> {
+    let mut req = req.clone().unwrap();
+    let body = req.text().await?;
+    let settings: UserSettings = match serde_json::from_str(&body) {
+        Ok(settings) => settings,
+        Err(_) => {
+            return Response::error("Invalid settings JSON", 400);
+        }
+    };
+
+    let api_key = match register_user(settings, kv).await {
+        Ok(api_key) => api_key,
+        Err(e) => {
+            return Response::error(e.to_string(), 400);
+        }
+    };
+
+    let response = json!({
+        "api_key": api_key,
+    });
+
+    Response::from_json(&response)
 }
 
 pub async fn channel_data(handle: Option<String>, youtube_api_key: String) -> Result<Response> {

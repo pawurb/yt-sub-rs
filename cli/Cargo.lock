@@ -1840,21 +1840,18 @@ dependencies = [
 
 [[package]]
 name = "yt-sub-core"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "210f589e6bc87fbb2569b253c70d00c77f75adb4ae6f8e6657d7209fb93d8c60"
+checksum = "dc3499b991f4e8cd5824c5510417a82839fc2e52bbac516eac4107412064ceae"
 dependencies = [
  "chrono",
  "env_logger",
  "eyre",
- "home",
  "log",
  "reqwest",
  "serde",
  "serde_json",
- "tokio",
  "toml",
- "uuid",
  "xmltojson",
 ]
 

@@ -24,9 +24,14 @@ worker = { version = "0.4.2" }
 worker-macros = { version = "0.4.2" }
 console_error_panic_hook = { version = "0.1.1" }
 serde_json = "1.0.128"
-yt-sub-core = "0.1.3"
+
+yt-sub-core = "0.1.5"
+# yt-sub-core = { path = "../../core" }
 # wasm-rs-dbg = "0.1.2"
+eyre = "0.6.12"
+uuid = { version = "1.11.0", features = ["v4", "js"] }
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }
+mockito = "1.5.0"
 tokio = { version = "1.40", features = ["full"] }

@@ -1,4 +1,6 @@
-use eyre::Result;
+use eyre::{OptionExt, Result};
+use reqwest::Client;
+use serde_json::Value;
 use std::{
     fs::File,
     io::Write,
@@ -7,7 +9,7 @@ use std::{
 
 use chrono::{DateTime, Duration, Utc};
 use home::home_dir;
-use yt_sub_core::UserSettings;
+use yt_sub_core::{user_settings::API_HOST, UserSettings};
 
 pub trait UserSettingsCLI {
     fn get_last_run_at(&self) -> DateTime<Utc>;
@@ -16,6 +18,10 @@ pub trait UserSettingsCLI {
     fn read(path: Option<&PathBuf>) -> Result<UserSettings>;
     fn sync(&self, path: Option<&PathBuf>) -> Result<()>;
     fn default_path() -> PathBuf;
+    fn register_remote(
+        self,
+        host: Option<&str>,
+    ) -> impl std::future::Future<Output = Result<()>> + Send;
 }
 
 impl UserSettingsCLI for UserSettings {
@@ -93,6 +99,45 @@ impl UserSettingsCLI for UserSettings {
     fn default_path() -> PathBuf {
         home_dir().unwrap().join(".config/yt-sub-rs/config.toml")
     }
+
+    async fn register_remote(self, host: Option<&str>) -> Result<()> {
+        if self.api_key.is_some() {
+            eyre::bail!("Remote account is already registered.")
+        }
+
+        _ = self.get_slack_notifier().ok_or_eyre(
+            "You must configure a Slack notifier to register a remote account:
+https://github.com/pawurb/yt-sub-rs#notifiers-configuration",
+        )?;
+
+        let client = Client::new();
+        let host = host.unwrap_or(API_HOST);
+
+        let res = client
+            .post(format!("{}/register", host))
+            .json(&self)
+            .send()
+            .await?;
+
+        if !res.status().is_success() {
+            let err_msg = res.text().await?;
+            eyre::bail!("Failed to register remote account: {err_msg}")
+        }
+
+        let res_json: Value = res.json().await?;
+        let remote_api_key = res_json["api_key"].as_str().unwrap().to_string();
+
+        let config_path = self.path.clone();
+
+        let settings = Self {
+            api_key: Some(remote_api_key),
+            ..self
+        };
+
+        settings.sync(Some(&config_path))?;
+
+        Ok(())
+    }
 }
 
 fn last_run_at_path() -> PathBuf {
@@ -101,7 +146,11 @@ fn last_run_at_path() -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use yt_sub_core::channel::Channel;
+    use mockito::Server;
+    use yt_sub_core::{
+        channel::Channel,
+        notifier::{Notifier, SlackConfig},
+    };
 
     use crate::test_helpers::{test_config_path, Cleaner};
 
@@ -157,4 +206,51 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_register_remote_ok() -> Result<()> {
+        let mut server = Server::new_async().await;
+        let host = server.host_with_port();
+        let host = format!("http://{}", host);
+
+        let path = test_config_path();
+        let _cl = Cleaner { path: path.clone() };
+        let settings = UserSettings::init(Some(&path))?;
+
+        let notifier = Notifier::Slack(SlackConfig {
+            webhook_url: "https://slack.com/xxx".to_string(),
+            channel: "yt-videos".to_string(),
+        });
+
+        let mut notifiers = settings.notifiers.clone();
+        notifiers.push(notifier);
+
+        let settings = UserSettings {
+            notifiers,
+            ..settings
+        };
+
+        let m = server
+            .mock("POST", "/register")
+            .with_body(r#"{"api_key": "REMOTE_API_KEY" }"#)
+            .create_async()
+            .await;
+
+        settings.register_remote(Some(&host)).await?;
+        m.assert_async().await;
+
+        let settings = UserSettings::read(Some(&path))?;
+
+        assert_eq!(settings.api_key, Some("REMOTE_API_KEY".to_string()));
+
+        Ok(())
+    }
+
+    // #[tokio::test]
+    // async fn test_register_remote_invalid() -> Result<()> {
+    //     let mut server = Server::new_async().await;
+    //     let host = server.host_with_port();
+    //     let host = format!("http://{}", host);
+    //     Ok(())
+    // }
 }
