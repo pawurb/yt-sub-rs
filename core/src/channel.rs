@@ -66,8 +66,7 @@ impl Channel {
         let client = Client::new();
 
         let res = client
-            .get(format!("{}/channel_data", host))
-            .header("x-handle", handle)
+            .get(format!("{}/channel_data/{}", host, handle))
             .send()
             .await?;
         if res.status() == 404 {
@@ -152,8 +151,7 @@ mod tests {
         let host = server.host_with_port();
         let host = format!("http://{}", host);
         let m = server
-            .mock("GET", "/channel_data")
-            .match_header("x-handle", "@Test_handle")
+            .mock("GET", "/channel_data/@Test_handle")
             .with_body(
                 r#"{
             "channel_id": "UC_iD0xppBwwsrM9DegC5cQQ",
