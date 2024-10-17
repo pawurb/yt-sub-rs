@@ -215,20 +215,11 @@ mod tests {
 
         let path = test_config_path();
         let _cl = Cleaner { path: path.clone() };
-        let settings = UserSettings::init(Some(&path))?;
 
-        let notifier = Notifier::Slack(SlackConfig {
-            webhook_url: "https://slack.com/xxx".to_string(),
-            channel: "yt-videos".to_string(),
-        });
-
-        let mut notifiers = settings.notifiers.clone();
-        notifiers.push(notifier);
-
-        let settings = UserSettings {
-            notifiers,
-            ..settings
-        };
+        let settings = build_settings(
+            Some(path.clone()),
+            Some("https://slack.com/XXX".to_string()),
+        );
 
         let m = server
             .mock("POST", "/register")
@@ -246,11 +237,46 @@ mod tests {
         Ok(())
     }
 
-    // #[tokio::test]
-    // async fn test_register_remote_invalid() -> Result<()> {
-    //     let mut server = Server::new_async().await;
-    //     let host = server.host_with_port();
-    //     let host = format!("http://{}", host);
-    //     Ok(())
-    // }
+    #[tokio::test]
+    async fn test_register_remote_invalid() -> Result<()> {
+        let mut server = Server::new_async().await;
+        let host = server.host_with_port();
+        let host = format!("http://{}", host);
+        let m = server
+            .mock("POST", "/register")
+            .with_body(r#"Registration failed"#)
+            .with_status(400)
+            .create_async()
+            .await;
+
+        let settings = build_settings(None, Some("https://slack.com/XXX".to_string()));
+
+        if let Err(e) = settings.register_remote(Some(&host)).await {
+            assert!(e.to_string().contains("Registration failed"));
+        } else {
+            panic!("Expected an error!");
+        }
+
+        m.assert_async().await;
+        Ok(())
+    }
+
+    fn build_settings(path: Option<PathBuf>, slack_webhook: Option<String>) -> UserSettings {
+        let path = path.unwrap_or(test_config_path());
+        let settings = UserSettings::default(path);
+
+        if let Some(webhook) = slack_webhook {
+            let notifier = Notifier::Slack(SlackConfig {
+                webhook_url: webhook,
+                channel: "test".to_string(),
+            });
+
+            UserSettings {
+                notifiers: vec![notifier],
+                ..settings
+            }
+        } else {
+            settings
+        }
+    }
 }

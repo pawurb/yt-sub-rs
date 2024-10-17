@@ -37,3 +37,14 @@ async fn test_missing_handle() {
         .expect("Failed to send request");
     assert_eq!(res.status(), 404);
 }
+
+#[tokio::test]
+async fn test_failed_register() {
+    let client = Client::new();
+    let res = client
+        .post("https://yt-sub-api.apki.workers.dev/register")
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(res.status(), 400);
+}

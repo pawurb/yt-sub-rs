@@ -153,11 +153,9 @@ mod tests {
         let mut kv = MockKvStore::new();
 
         if let Err(e) = register_user(settings, &mut kv).await {
-            let error_message = e.to_string();
-
-            assert!(error_message.contains("Invalid API key present"));
+            assert!(e.to_string().contains("Invalid API key present"));
         } else {
-            panic!("Expected an error, but got a success result");
+            panic!("Expected an error!");
         }
 
         Ok(())
@@ -172,11 +170,9 @@ mod tests {
             .await?;
 
         if let Err(e) = register_user(settings, &mut kv).await {
-            let error_message = e.to_string();
-
-            assert!(error_message.contains("Already registered"));
+            assert!(e.to_string().contains("Already registered"));
         } else {
-            panic!("Expected an error, but got a success result");
+            panic!("Expected an error!");
         }
 
         Ok(())
@@ -188,11 +184,9 @@ mod tests {
         let mut kv = MockKvStore::new();
 
         if let Err(e) = register_user(settings, &mut kv).await {
-            let error_message = e.to_string();
-
-            assert!(error_message.contains("Missing Slack notifier settings"));
+            assert!(e.to_string().contains("Missing Slack notifier settings"));
         } else {
-            panic!("Expected an error, but got a success result");
+            panic!("Expected an error!");
         }
 
         Ok(())
@@ -214,11 +208,9 @@ mod tests {
         let mut kv = MockKvStore::new();
 
         if let Err(e) = register_user(settings, &mut kv).await {
-            let error_message = e.to_string();
-
-            assert!(error_message.contains("Invalid slack webhook URL"));
+            assert!(e.to_string().contains("Invalid slack webhook URL"));
         } else {
-            panic!("Expected an error, but got a success result");
+            panic!("Expected an error!");
         }
 
         m.assert_async().await;
