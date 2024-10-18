@@ -1,7 +1,10 @@
 use eyre::Result;
 use uuid::Uuid;
-use worker::kv::KvStore;
 use yt_sub_core::UserSettings;
+
+use crate::store::KvWrapper;
+
+static USER_IDS_KEY: &str = "user_ids";
 
 pub async fn register_user<T: KvWrapper>(settings: UserSettings, kv: &mut T) -> Result<String> {
     if let Some(api_key) = settings.api_key {
@@ -42,65 +45,30 @@ pub async fn register_user<T: KvWrapper>(settings: UserSettings, kv: &mut T) -> 
     let settings_json = serde_json::to_string(&settings)?;
     kv.put_val(&api_key, &settings_json).await?;
 
+    let user_ids = kv
+        .get_val(USER_IDS_KEY)
+        .await?
+        .unwrap_or_else(|| "".to_string());
+
+    let mut user_ids: Vec<&str> = user_ids.split(',').filter(|s| !s.is_empty()).collect();
+
+    if user_ids.contains(&api_key.as_str()) {
+        panic!("It should never happen!");
+    } else {
+        user_ids.push(&api_key);
+        kv.put_val(USER_IDS_KEY, &user_ids.join(",")).await?;
+    }
+
     Ok(api_key.to_string())
-}
-
-pub trait KvWrapper {
-    async fn put_val(&mut self, key: &str, value: &str) -> Result<()>;
-    async fn get_val(&self, key: &str) -> Result<Option<String>>;
-}
-
-impl KvWrapper for KvStore {
-    async fn put_val(&mut self, key: &str, value: &str) -> Result<()> {
-        self.put(key, value)
-            .map_err(|e| eyre::eyre!("Failed to put key: {}", e))?
-            .execute()
-            .await
-            .or_else(|e| eyre::bail!("Failed to put key: {}", e))?;
-
-        Ok(())
-    }
-
-    async fn get_val(&self, key: &str) -> Result<Option<String>> {
-        let res = match self.get(key).text().await {
-            Ok(value) => value,
-            Err(e) => {
-                eyre::bail!("Failed to get key: {}", e)
-            }
-        };
-
-        Ok(res)
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    struct MockKvStore {
-        pub store: HashMap<String, String>,
-    }
-
-    impl MockKvStore {
-        pub fn new() -> Self {
-            Self {
-                store: HashMap::new(),
-            }
-        }
-    }
-
-    impl KvWrapper for MockKvStore {
-        async fn put_val(&mut self, key: &str, value: &str) -> Result<()> {
-            self.store.insert(key.to_string(), value.to_string());
-            Ok(())
-        }
-
-        async fn get_val(&self, key: &str) -> Result<Option<String>> {
-            Ok(self.store.get(key).map(|v| v.to_string()))
-        }
-    }
-
     use mockito::Server;
-    use std::{collections::HashMap, path::PathBuf};
+    use std::path::PathBuf;
     use yt_sub_core::notifier::{Notifier, SlackConfig};
+
+    use crate::store::tests::MockKvStore;
 
     use super::*;
     #[tokio::test]
@@ -127,22 +95,10 @@ mod tests {
         let _settings: UserSettings =
             serde_json::from_str(&settings_json).expect("Failed to parse settings JSON");
 
+        let ids = kv.get_val("user_ids").await.unwrap().unwrap();
+        assert_eq!(ids, api_key);
+
         m.assert_async().await;
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_kv_wrapper() -> Result<()> {
-        let mut kv = MockKvStore::new();
-
-        let empty = kv.get_val("test").await?;
-        assert!(empty.is_none());
-
-        kv.put_val("test_key", "test_val").await?;
-
-        let present = kv.get_val("test_key").await?;
-        assert_eq!(present, Some("test_val".to_string()));
 
         Ok(())
     }

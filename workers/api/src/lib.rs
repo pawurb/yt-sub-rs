@@ -1,4 +1,5 @@
 mod registration;
+mod store;
 use kv::KvStore;
 use registration::register_user;
 use serde_json::{json, Value};
