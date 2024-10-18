@@ -1,9 +1,16 @@
 mod registration;
+mod store;
 use kv::KvStore;
 use registration::register_user;
 use serde_json::{json, Value};
 use worker::*;
 use yt_sub_core::UserSettings;
+
+#[event(scheduled)]
+async fn scheduled(_evt: ScheduledEvent, _env: Env, _ctx: ScheduleContext) {
+    console_error_panic_hook::set_once();
+    wasm_rs_dbg::dbg!("Hello from cron!");
+}
 
 #[event(fetch)]
 async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {

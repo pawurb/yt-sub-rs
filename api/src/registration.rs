@@ -2,6 +2,8 @@ use eyre::Result;
 use uuid::Uuid;
 use yt_sub_core::UserSettings;
 
+use crate::store::KvWrapper;
+
 static USER_IDS_KEY: &str = "user_ids";
 
 pub async fn register_user<T: KvWrapper>(settings: UserSettings, kv: &mut T) -> Result<String> {
@@ -82,7 +84,7 @@ mod tests {
             .await;
 
         let settings = build_settings(false, Some(format!("{}/slack_webhook", host)));
-        let mut kv = MockKvStore::new();
+        let mut kv = MockKvStore::default();
 
         let api_key = register_user(settings, &mut kv)
             .await
@@ -104,7 +106,7 @@ mod tests {
     #[tokio::test]
     async fn test_invalid_api_key() -> Result<()> {
         let settings = build_settings(true, None);
-        let mut kv = MockKvStore::new();
+        let mut kv = MockKvStore::default();
 
         if let Err(e) = register_user(settings, &mut kv).await {
             assert!(e.to_string().contains("Invalid API key present"));
@@ -118,7 +120,7 @@ mod tests {
     #[tokio::test]
     async fn test_registered_api_key() -> Result<()> {
         let settings = build_settings(true, None);
-        let mut kv = MockKvStore::new();
+        let mut kv = MockKvStore::default();
 
         kv.put_val(&settings.api_key.clone().unwrap(), "true")
             .await?;
@@ -135,7 +137,7 @@ mod tests {
     #[tokio::test]
     async fn test_slack_not_configured() -> Result<()> {
         let settings = build_settings(false, None);
-        let mut kv = MockKvStore::new();
+        let mut kv = MockKvStore::default();
 
         if let Err(e) = register_user(settings, &mut kv).await {
             assert!(e.to_string().contains("Missing Slack notifier settings"));
@@ -159,7 +161,7 @@ mod tests {
             .await;
 
         let settings = build_settings(false, Some(format!("{}/slack_webhook", host)));
-        let mut kv = MockKvStore::new();
+        let mut kv = MockKvStore::default();
 
         if let Err(e) = register_user(settings, &mut kv).await {
             assert!(e.to_string().contains("Invalid slack webhook URL"));

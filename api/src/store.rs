@@ -1,4 +1,5 @@
 use eyre::Result;
+use std::collections::HashMap;
 use worker::kv::KvStore;
 
 pub trait KvWrapper {
@@ -32,18 +33,10 @@ impl KvWrapper for KvStore {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use std::collections::HashMap;
 
+    #[derive(Default)]
     pub struct MockKvStore {
         pub store: HashMap<String, String>,
-    }
-
-    impl MockKvStore {
-        pub fn new() -> Self {
-            Self {
-                store: HashMap::new(),
-            }
-        }
     }
 
     impl KvWrapper for MockKvStore {
@@ -59,7 +52,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn test_kv_wrapper() -> Result<()> {
-        let mut kv = MockKvStore::new();
+        let mut kv = MockKvStore::default();
 
         let empty = kv.get_val("test").await?;
         assert!(empty.is_none());
