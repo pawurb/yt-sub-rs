@@ -1,6 +1,5 @@
-workers/*/target
-workers/*/wrangler.toml
-workers/*/.wrangler  
+api/target
+api/wrangler.toml
+api/.wrangler  
 cli/target
 core/target
-*/wrangler.toml

@@ -1,9 +1,42 @@
+mod check_videos;
 mod registration;
+mod store;
+pub mod users;
+use crate::check_videos::check_videos;
 use kv::KvStore;
 use registration::register_user;
 use serde_json::{json, Value};
+use users::User;
+use wasm_rs_dbg::dbg as wdbg;
 use worker::*;
 use yt_sub_core::UserSettings;
+
+#[event(scheduled)]
+async fn scheduled(_evt: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
+    console_error_panic_hook::set_once();
+    let mut kv = env.kv("users").expect("Failed to get users kv store");
+
+    let users = match User::list(&kv).await {
+        Ok(users) => users,
+        Err(e) => {
+            wdbg!("Failed to list users: {:?}", &e);
+            return;
+        }
+    };
+
+    wdbg!("Users: {:?}", &users);
+
+    for user in users {
+        match check_videos(user, &mut kv).await {
+            Ok(_) => {}
+            Err(e) => {
+                wdbg!("Failed to check videos: {:?}", &e);
+            }
+        }
+    }
+
+    wdbg!("Hello from cron!");
+}
 
 #[event(fetch)]
 async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {

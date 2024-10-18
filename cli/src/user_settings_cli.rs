@@ -12,7 +12,7 @@ use home::home_dir;
 use yt_sub_core::{user_settings::API_HOST, UserSettings};
 
 pub trait UserSettingsCLI {
-    fn get_last_run_at(&self) -> DateTime<Utc>;
+    fn last_run_at(&self) -> DateTime<Utc>;
     fn update_last_run_at(&self) -> Result<()>;
     fn init(path: Option<&PathBuf>) -> Result<UserSettings>;
     fn read(path: Option<&PathBuf>) -> Result<UserSettings>;
@@ -25,7 +25,7 @@ pub trait UserSettingsCLI {
 }
 
 impl UserSettingsCLI for UserSettings {
-    fn get_last_run_at(&self) -> DateTime<Utc> {
+    fn last_run_at(&self) -> DateTime<Utc> {
         let path = home_dir().unwrap().join(".yt-sub-rs/last_run_at.txt");
         if Path::new(&path).exists() {
             let last_run_at =

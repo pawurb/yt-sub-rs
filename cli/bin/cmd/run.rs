@@ -35,7 +35,7 @@ impl RunArgs {
         let last_run_at = if let Some(hours_offset) = hours_offset {
             Utc::now() - chrono::Duration::hours(hours_offset as i64)
         } else {
-            settings.get_last_run_at()
+            settings.last_run_at()
         };
 
         let mut new_videos = vec![];

@@ -58,17 +58,17 @@ jobs:
           cargo test
       - name: Check 'api'
         run: | 
-          cd workers/api
+          cd api
           cargo check 
       - name: Fmt 'api'
         run: |
-          cd workers/api
+          cd api
           cargo fmt --all --check
       - name: Lint 'api'
         run: |
-          cd workers/api
+          cd api
           cargo clippy --all --all-features -- -D warnings
       - name: Run tests 'api'
         run: | 
-          cd workers/api
+          cd api
           cargo test
