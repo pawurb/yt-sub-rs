@@ -1,0 +1,37 @@
+[package]
+license = "MIT"
+name = "yt-sub-cron"
+version = "0.0.0"
+publish = false
+edition = "2021"
+authors = ["pawurb <contact@pawelurbanek.com>"]
+
+[package.metadata.release]
+release = false
+
+[profile.release]
+lto = true
+
+# https://github.com/rustwasm/wasm-pack/issues/1247
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+worker = { version = "0.4.2" }
+worker-macros = { version = "0.4.2" }
+console_error_panic_hook = { version = "0.1.1" }
+serde_json = "1.0.128"
+
+yt-sub-core = "0.1.5"
+# yt-sub-core = { path = "../../core" }
+wasm-rs-dbg = "0.1.2"
+eyre = "0.6.12"
+uuid = { version = "1.11.0", features = ["v4", "js"] }
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+mockito = "1.5.0"
+tokio = { version = "1.40", features = ["full"] }

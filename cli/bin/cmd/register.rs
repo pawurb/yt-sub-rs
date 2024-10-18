@@ -20,6 +20,7 @@ impl RegisterArgs {
 
         let settings = UserSettings::read(config.as_ref())?;
         settings.register_remote(None).await?;
+        println!("Registered successfully! You'll receive notifications about new videos to your configured Slack channel.");
         Ok(())
     }
 }
