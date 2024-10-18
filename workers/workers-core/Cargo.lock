@@ -1780,7 +1780,7 @@ dependencies = [
 
 [[package]]
 name = "yt-sub-workers-core"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "eyre",
  "serde",

@@ -1998,6 +1998,21 @@ dependencies = [
  "worker",
  "worker-macros",
  "yt-sub-core",
+ "yt-sub-workers-core",
+]
+
+[[package]]
+name = "yt-sub-workers-core"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9d92845c7e7e18a791aac9c52da48d651e7d51d4956636902b49d29401b06f3"
+dependencies = [
+ "eyre",
+ "serde",
+ "serde_json",
+ "worker",
+ "worker-macros",
+ "yt-sub-core",
 ]
 
 [[package]]

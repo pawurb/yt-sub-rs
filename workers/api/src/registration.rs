@@ -2,8 +2,6 @@ use eyre::Result;
 use uuid::Uuid;
 use yt_sub_core::UserSettings;
 
-use crate::store::KvWrapper;
-
 static USER_IDS_KEY: &str = "user_ids";
 
 pub async fn register_user<T: KvWrapper>(settings: UserSettings, kv: &mut T) -> Result<String> {
