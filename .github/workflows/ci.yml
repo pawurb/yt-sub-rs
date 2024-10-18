@@ -56,19 +56,19 @@ jobs:
         run: | 
           cd cli
           cargo test
-      - name: Check 'yt-sub-api'
+      - name: Check 'api'
         run: | 
-          cd workers/yt-sub-api
+          cd workers/api
           cargo check 
-      - name: Fmt 'yt-sub-api'
+      - name: Fmt 'api'
         run: |
-          cd workers/yt-sub-api
+          cd workers/api
           cargo fmt --all --check
-      - name: Lint 'yt-sub-api'
+      - name: Lint 'api'
         run: |
-          cd workers/yt-sub-api
+          cd workers/api
           cargo clippy --all --all-features -- -D warnings
-      - name: Run tests 'yt-sub-api'
+      - name: Run tests 'api'
         run: | 
-          cd workers/yt-sub-api
+          cd workers/api
           cargo test
