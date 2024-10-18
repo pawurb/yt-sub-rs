@@ -30,6 +30,7 @@ yt-sub-core = "0.1.5"
 wasm-rs-dbg = "0.1.2"
 eyre = "0.6.12"
 uuid = { version = "1.11.0", features = ["v4", "js"] }
+reqwest = "0.12"
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }
