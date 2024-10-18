@@ -1,5 +1,4 @@
 use eyre::Result;
-use std::collections::HashMap;
 use worker::kv::KvStore;
 
 pub trait KvWrapper {
@@ -33,6 +32,7 @@ impl KvWrapper for KvStore {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[derive(Default)]
     pub struct MockKvStore {
