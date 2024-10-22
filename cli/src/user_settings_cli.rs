@@ -11,17 +11,15 @@ use chrono::{DateTime, Duration, Utc};
 use home::home_dir;
 use yt_sub_core::{user_settings::API_HOST, UserSettings};
 
+#[allow(async_fn_in_trait)]
 pub trait UserSettingsCLI {
     fn last_run_at(&self) -> DateTime<Utc>;
-    fn update_last_run_at(&self) -> Result<()>;
+    fn touch_last_run_at(&self) -> Result<()>;
     fn init(path: Option<&PathBuf>) -> Result<UserSettings>;
     fn read(path: Option<&PathBuf>) -> Result<UserSettings>;
-    fn sync(&self, path: Option<&PathBuf>) -> Result<()>;
+    fn save(&self, path: Option<&PathBuf>) -> Result<()>;
     fn default_path() -> PathBuf;
-    fn register_remote(
-        self,
-        host: Option<&str>,
-    ) -> impl std::future::Future<Output = Result<()>> + Send;
+    async fn register_remote(self, host: Option<&str>) -> Result<()>;
 }
 
 impl UserSettingsCLI for UserSettings {
@@ -38,7 +36,7 @@ impl UserSettingsCLI for UserSettings {
         }
     }
 
-    fn update_last_run_at(&self) -> Result<()> {
+    fn touch_last_run_at(&self) -> Result<()> {
         let last_run_at_path = last_run_at_path();
         let last_run_at = Utc::now().to_rfc3339();
         if let Some(parent) = Path::new(&last_run_at_path).parent() {
@@ -60,7 +58,7 @@ impl UserSettingsCLI for UserSettings {
         }
 
         let settings = Self::default(path.clone());
-        settings.sync(Some(path))?;
+        settings.save(Some(path))?;
 
         Ok(settings)
     }
@@ -80,7 +78,7 @@ impl UserSettingsCLI for UserSettings {
         Ok(settings)
     }
 
-    fn sync(&self, path: Option<&PathBuf>) -> Result<()> {
+    fn save(&self, path: Option<&PathBuf>) -> Result<()> {
         let res = toml::to_string(self).expect("Failed to serialize TOML");
 
         let default_path = Self::default_path();
@@ -134,7 +132,7 @@ https://github.com/pawurb/yt-sub-rs#notifiers-configuration",
             ..self
         };
 
-        settings.sync(Some(&config_path))?;
+        settings.save(Some(&config_path))?;
 
         Ok(())
     }
@@ -199,7 +197,7 @@ mod tests {
             ..settings
         };
 
-        settings.sync(Some(&path))?;
+        settings.save(Some(&path))?;
 
         let updated = UserSettings::read(Some(&path))?;
         assert_eq!(updated.channels.len(), 1);

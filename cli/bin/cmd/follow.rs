@@ -68,7 +68,7 @@ impl FollowArgs {
             ..settings
         };
 
-        settings.sync(config.as_ref())?;
+        settings.save(config.as_ref())?;
 
         println!(
             "You are now following:

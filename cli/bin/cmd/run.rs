@@ -70,7 +70,7 @@ impl RunArgs {
             }
         }
 
-        settings.update_last_run_at()?;
+        settings.touch_last_run_at()?;
 
         Ok(())
     }

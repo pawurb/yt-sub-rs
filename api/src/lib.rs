@@ -1,12 +1,12 @@
 mod check_videos;
 mod registration;
 mod store;
-pub mod users;
+pub mod user_settings_api;
 use crate::check_videos::check_videos;
 use kv::KvStore;
 use registration::register_user;
 use serde_json::{json, Value};
-use users::User;
+use user_settings_api::UserSettingsAPI;
 use wasm_rs_dbg::dbg as wdbg;
 use worker::*;
 use yt_sub_core::UserSettings;
@@ -16,7 +16,7 @@ async fn scheduled(_evt: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
     console_error_panic_hook::set_once();
     let mut kv = env.kv("users").expect("Failed to get users kv store");
 
-    let users = match User::list(&kv).await {
+    let users = match UserSettings::list_ids(&kv).await {
         Ok(users) => users,
         Err(e) => {
             wdbg!("Failed to list users: {:?}", &e);

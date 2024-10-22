@@ -15,6 +15,7 @@ pub struct UserSettings {
     pub api_key: Option<String>,
     #[serde(skip_serializing, skip_deserializing)]
     pub path: PathBuf,
+    pub schedule: Option<Vec<u32>>,
 }
 
 impl Display for UserSettings {
@@ -31,6 +32,7 @@ impl UserSettings {
             notifiers: vec![Notifier::default()],
             channels: vec![],
             api_key: None,
+            schedule: None,
         }
     }
 

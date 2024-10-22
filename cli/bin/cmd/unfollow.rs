@@ -41,7 +41,7 @@ impl UnfollowArgs {
             ..settings
         };
 
-        settings.sync(config.as_ref())?;
+        settings.save(config.as_ref())?;
 
         println!("You've unfollowed {desc}!", desc = to_unfollow.description);
 

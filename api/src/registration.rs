@@ -2,7 +2,7 @@ use eyre::Result;
 use uuid::Uuid;
 use yt_sub_core::UserSettings;
 
-use crate::{store::KvWrapper, users::User};
+use crate::{store::KvWrapper, user_settings_api::UserSettingsAPI};
 
 pub async fn register_user(settings: UserSettings, kv: &mut impl KvWrapper) -> Result<String> {
     if let Some(api_key) = settings.api_key {
@@ -40,25 +40,13 @@ pub async fn register_user(settings: UserSettings, kv: &mut impl KvWrapper) -> R
         ..settings
     };
 
-    let settings_json = serde_json::to_string(&settings)?;
-    kv.put_val(&api_key, &settings_json).await?;
-
-    let users = User::list(kv).await?;
-
-    let user_ids: Vec<&str> = users.iter().map(|u| u.api_key.as_str()).collect();
-
-    if user_ids.contains(&api_key.as_str()) {
-        panic!("It should never happen!");
-    } else {
-        let new_user = User::new(&api_key);
-        User::save(&new_user, kv).await?;
-    }
+    settings.save(kv).await?;
 
     Ok(api_key.to_string())
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use mockito::Server;
     use std::path::PathBuf;
     use yt_sub_core::notifier::{Notifier, SlackConfig};
@@ -169,7 +157,7 @@ mod tests {
         Ok(())
     }
 
-    fn build_settings(with_api_key: bool, slack_webhook: Option<String>) -> UserSettings {
+    pub fn build_settings(with_api_key: bool, slack_webhook: Option<String>) -> UserSettings {
         let settings = UserSettings::default(PathBuf::from("test.toml"));
 
         let settings = if with_api_key {
