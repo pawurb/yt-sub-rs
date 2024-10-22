@@ -5,6 +5,7 @@ use worker::kv::KvStore;
 pub trait KvWrapper {
     async fn put_val(&mut self, key: &str, value: &str) -> Result<()>;
     async fn get_val(&self, key: &str) -> Result<Option<String>>;
+    async fn delete_val(&mut self, key: &str) -> Result<()>;
 }
 
 impl KvWrapper for KvStore {
@@ -28,6 +29,14 @@ impl KvWrapper for KvStore {
 
         Ok(res)
     }
+
+    async fn delete_val(&mut self, key: &str) -> Result<()> {
+        self.delete(key)
+            .await
+            .or_else(|e| eyre::bail!("Failed to delete key: {}", e))?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -48,6 +57,11 @@ pub mod tests {
 
         async fn get_val(&self, key: &str) -> Result<Option<String>> {
             Ok(self.store.get(key).map(|v| v.to_string()))
+        }
+
+        async fn delete_val(&mut self, key: &str) -> Result<()> {
+            self.store.remove(key);
+            Ok(())
         }
     }
 

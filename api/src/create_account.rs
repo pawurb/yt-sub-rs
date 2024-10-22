@@ -4,7 +4,7 @@ use yt_sub_core::UserSettings;
 
 use crate::{store::KvWrapper, user_settings_api::UserSettingsAPI};
 
-pub async fn register_user(settings: UserSettings, kv: &mut impl KvWrapper) -> Result<String> {
+pub async fn create_account(settings: UserSettings, kv: &mut impl KvWrapper) -> Result<String> {
     if let Some(api_key) = settings.api_key {
         if kv.get_val(&api_key).await?.is_some() {
             eyre::bail!("Already registered with API key: {}", api_key)
@@ -24,7 +24,13 @@ pub async fn register_user(settings: UserSettings, kv: &mut impl KvWrapper) -> R
     };
 
     notifier
-        .notify(vec!["Registering remote account.".to_string()], false)
+        .notify(
+            vec![
+                "Registered remote account. You'll receive notifications about new videos."
+                    .to_string(),
+            ],
+            false,
+        )
         .await
         .map_err(|e| {
             eyre::eyre!(
@@ -69,7 +75,7 @@ pub mod tests {
         let settings = build_settings(false, Some(format!("{}/slack_webhook", host)));
         let mut kv = MockKvStore::default();
 
-        let api_key = register_user(settings, &mut kv)
+        let api_key = create_account(settings, &mut kv)
             .await
             .expect("Failed to register user");
 
@@ -91,7 +97,7 @@ pub mod tests {
         let settings = build_settings(true, None);
         let mut kv = MockKvStore::default();
 
-        if let Err(e) = register_user(settings, &mut kv).await {
+        if let Err(e) = create_account(settings, &mut kv).await {
             assert!(e.to_string().contains("Invalid API key present"));
         } else {
             panic!("Expected an error!");
@@ -108,7 +114,7 @@ pub mod tests {
         kv.put_val(&settings.api_key.clone().unwrap(), "true")
             .await?;
 
-        if let Err(e) = register_user(settings, &mut kv).await {
+        if let Err(e) = create_account(settings, &mut kv).await {
             assert!(e.to_string().contains("Already registered"));
         } else {
             panic!("Expected an error!");
@@ -122,7 +128,7 @@ pub mod tests {
         let settings = build_settings(false, None);
         let mut kv = MockKvStore::default();
 
-        if let Err(e) = register_user(settings, &mut kv).await {
+        if let Err(e) = create_account(settings, &mut kv).await {
             assert!(e.to_string().contains("Missing Slack notifier settings"));
         } else {
             panic!("Expected an error!");
@@ -146,7 +152,7 @@ pub mod tests {
         let settings = build_settings(false, Some(format!("{}/slack_webhook", host)));
         let mut kv = MockKvStore::default();
 
-        if let Err(e) = register_user(settings, &mut kv).await {
+        if let Err(e) = create_account(settings, &mut kv).await {
             assert!(e.to_string().contains("Invalid slack webhook URL"));
         } else {
             panic!("Expected an error!");

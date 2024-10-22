@@ -5,12 +5,11 @@ use eyre::Result;
 use yt_sub::user_settings_cli::UserSettingsCLI;
 use yt_sub_core::UserSettings;
 
+use crate::CONFIG_DESC;
+
 #[derive(Debug, Parser)]
 pub struct UnfollowArgs {
-    #[arg(
-        long,
-        help = "Path to config file, deafult '~/.config/yt-sub-rs/config.toml'"
-    )]
+    #[arg(long, help = CONFIG_DESC)]
     config: Option<PathBuf>,
 
     #[arg(long)]

@@ -7,16 +7,45 @@ static USER_IDS_KEY: &str = "user_ids";
 
 #[allow(async_fn_in_trait)]
 pub trait UserSettingsAPI {
+    fn api_key(&self) -> String;
+    async fn read(api_key: &str, kv: &impl KvWrapper) -> Result<UserSettings>;
     async fn last_run_at(&self, kv: &impl KvWrapper) -> Result<DateTime<Utc>>;
     async fn touch_last_run_at(&self, kv: &mut impl KvWrapper) -> Result<()>;
-    fn api_key(&self) -> String;
     async fn list_ids(kv: &impl KvWrapper) -> Result<Vec<String>>;
     async fn save(&self, kv: &mut impl KvWrapper) -> Result<()>;
+    async fn delete(api_key: &str, kv: &mut impl KvWrapper) -> Result<()>;
 }
 
 impl UserSettingsAPI for UserSettings {
     fn api_key(&self) -> String {
         self.api_key.clone().expect("Missing API key")
+    }
+
+    async fn read(api_key: &str, kv: &impl KvWrapper) -> Result<Self> {
+        let json = kv
+            .get_val(api_key)
+            .await?
+            .ok_or_else(|| eyre::eyre!("No settings found for user"))?;
+
+        let settings: Self = serde_json::from_str(&json).expect("Failed to parse settings");
+
+        Ok(settings)
+    }
+
+    async fn delete(api_key: &str, kv: &mut impl KvWrapper) -> Result<()> {
+        let mut user_ids = Self::list_ids(kv).await?;
+
+        if !user_ids.contains(&api_key.to_string()) {
+            eyre::bail!("API key not found")
+        }
+
+        user_ids.retain(|id| id != api_key);
+        kv.put_val(USER_IDS_KEY, &user_ids.join(",")).await?;
+
+        kv.delete_val(api_key).await?;
+        kv.delete_val(&last_run_at_key(api_key)).await?;
+
+        Ok(())
     }
 
     async fn list_ids(kv: &impl KvWrapper) -> Result<Vec<String>> {
@@ -51,9 +80,7 @@ impl UserSettingsAPI for UserSettings {
     }
 
     async fn last_run_at(&self, kv: &impl KvWrapper) -> Result<DateTime<Utc>> {
-        let key = format!("last_run_at_{}", self.api_key());
-
-        let Some(last_run_at) = kv.get_val(&key).await? else {
+        let Some(last_run_at) = kv.get_val(&last_run_at_key(&self.api_key())).await? else {
             return Ok(Utc::now() - Duration::days(7));
         };
         let last_run_at = DateTime::parse_from_rfc3339(&last_run_at)
@@ -64,17 +91,21 @@ impl UserSettingsAPI for UserSettings {
     }
 
     async fn touch_last_run_at(&self, kv: &mut impl KvWrapper) -> Result<()> {
-        let key = format!("last_run_at_{}", self.api_key());
-        kv.put_val(&key, &Utc::now().to_rfc3339()).await?;
+        kv.put_val(&last_run_at_key(&self.api_key()), &Utc::now().to_rfc3339())
+            .await?;
 
         Ok(())
     }
 }
 
+fn last_run_at_key(api_key: &str) -> String {
+    format!("last_run_at_{}", api_key)
+}
+
 #[cfg(test)]
 
 mod tests {
-    use crate::{registration::tests::build_settings, store::tests::MockKvStore};
+    use crate::{create_account::tests::build_settings, store::tests::MockKvStore};
     use UserSettingsAPI;
 
     use super::*;

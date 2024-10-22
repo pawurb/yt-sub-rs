@@ -19,7 +19,8 @@ pub trait UserSettingsCLI {
     fn read(path: Option<&PathBuf>) -> Result<UserSettings>;
     fn save(&self, path: Option<&PathBuf>) -> Result<()>;
     fn default_path() -> PathBuf;
-    async fn register_remote(self, host: Option<&str>) -> Result<()>;
+    async fn create_account(self, host: Option<&str>) -> Result<()>;
+    async fn delete_account(&self, host: Option<&str>) -> Result<()>;
 }
 
 impl UserSettingsCLI for UserSettings {
@@ -98,7 +99,7 @@ impl UserSettingsCLI for UserSettings {
         home_dir().unwrap().join(".config/yt-sub-rs/config.toml")
     }
 
-    async fn register_remote(self, host: Option<&str>) -> Result<()> {
+    async fn create_account(self, host: Option<&str>) -> Result<()> {
         if self.api_key.is_some() {
             eyre::bail!("Remote account is already registered.")
         }
@@ -112,12 +113,12 @@ https://github.com/pawurb/yt-sub-rs#notifiers-configuration",
         let host = host.unwrap_or(API_HOST);
 
         let res = client
-            .post(format!("{}/register", host))
+            .post(format!("{}/account", host))
             .json(&self)
             .send()
             .await?;
 
-        if !res.status().is_success() {
+        if res.status() != 201 {
             let err_msg = res.text().await?;
             eyre::bail!("Failed to register remote account: {err_msg}")
         }
@@ -133,6 +134,28 @@ https://github.com/pawurb/yt-sub-rs#notifiers-configuration",
         };
 
         settings.save(Some(&config_path))?;
+
+        Ok(())
+    }
+
+    async fn delete_account(&self, host: Option<&str>) -> Result<()> {
+        if self.api_key.is_none() {
+            eyre::bail!("Remote account is not registered.")
+        }
+
+        let client = Client::new();
+        let host = host.unwrap_or(API_HOST);
+
+        let res = client
+            .delete(format!("{}/account", host))
+            .header("X-API-KEY", self.api_key.clone().unwrap())
+            .send()
+            .await?;
+
+        if !res.status().is_success() {
+            let err_msg = res.text().await?;
+            eyre::bail!("Failed to delete remote account: {err_msg}")
+        }
 
         Ok(())
     }
@@ -206,7 +229,39 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_register_remote_ok() -> Result<()> {
+    async fn test_delete_account_ok() -> Result<()> {
+        let mut server = Server::new_async().await;
+        let host = server.host_with_port();
+        let host = format!("http://{}", host);
+
+        let path = test_config_path();
+        let _cl = Cleaner { path: path.clone() };
+
+        let settings = build_settings(
+            Some(path.clone()),
+            Some("https://slack.com/XXX".to_string()),
+        );
+
+        let settings = UserSettings {
+            api_key: Some("test".to_string()),
+            ..settings
+        };
+
+        let m = server
+            .mock("DELETE", "/account")
+            .match_header("X-API-KEY", "test")
+            .with_body("OK")
+            .create_async()
+            .await;
+
+        settings.delete_account(Some(&host)).await?;
+        m.assert_async().await;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_create_account_ok() -> Result<()> {
         let mut server = Server::new_async().await;
         let host = server.host_with_port();
         let host = format!("http://{}", host);
@@ -220,12 +275,13 @@ mod tests {
         );
 
         let m = server
-            .mock("POST", "/register")
+            .mock("POST", "/account")
             .with_body(r#"{"api_key": "REMOTE_API_KEY" }"#)
+            .with_status(201)
             .create_async()
             .await;
 
-        settings.register_remote(Some(&host)).await?;
+        settings.create_account(Some(&host)).await?;
         m.assert_async().await;
 
         let settings = UserSettings::read(Some(&path))?;
@@ -236,12 +292,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_register_remote_invalid() -> Result<()> {
+    async fn test_create_account_invalid() -> Result<()> {
         let mut server = Server::new_async().await;
         let host = server.host_with_port();
         let host = format!("http://{}", host);
         let m = server
-            .mock("POST", "/register")
+            .mock("POST", "/account")
             .with_body(r#"Registration failed"#)
             .with_status(400)
             .create_async()
@@ -249,7 +305,7 @@ mod tests {
 
         let settings = build_settings(None, Some("https://slack.com/XXX".to_string()));
 
-        if let Err(e) = settings.register_remote(Some(&host)).await {
+        if let Err(e) = settings.create_account(Some(&host)).await {
             assert!(e.to_string().contains("Registration failed"));
         } else {
             panic!("Expected an error!");

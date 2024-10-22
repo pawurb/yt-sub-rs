@@ -4,12 +4,11 @@ use std::path::PathBuf;
 use yt_sub::user_settings_cli::UserSettingsCLI;
 use yt_sub_core::UserSettings;
 
+use crate::CONFIG_DESC;
+
 #[derive(Debug, Parser)]
 pub struct InitArgs {
-    #[arg(
-        long,
-        help = "Path to config file, deafult '~/.config/yt-sub-rs/config.toml'"
-    )]
+    #[arg(long, help = CONFIG_DESC)]
     config: Option<PathBuf>,
 }
 

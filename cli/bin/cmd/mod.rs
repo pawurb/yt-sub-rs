@@ -6,3 +6,4 @@ pub mod register;
 pub mod run;
 pub mod settings;
 pub mod unfollow;
+pub mod unregister;

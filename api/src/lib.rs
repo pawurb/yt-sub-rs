@@ -1,10 +1,12 @@
 mod check_videos;
-mod registration;
+mod create_account;
+mod delete_account;
 mod store;
 pub mod user_settings_api;
 use crate::check_videos::check_videos;
+use create_account::create_account;
+use delete_account::delete_account;
 use kv::KvStore;
-use registration::register_user;
 use serde_json::{json, Value};
 use user_settings_api::UserSettingsAPI;
 use wasm_rs_dbg::dbg as wdbg;
@@ -19,7 +21,7 @@ async fn scheduled(_evt: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
     let users = match UserSettings::list_ids(&kv).await {
         Ok(users) => users,
         Err(e) => {
-            wdbg!("Failed to list users: {:?}", &e);
+            wdbg!("Failed to list users: {}", &e);
             return;
         }
     };
@@ -30,7 +32,7 @@ async fn scheduled(_evt: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
         match check_videos(user, &mut kv).await {
             Ok(_) => {}
             Err(e) => {
-                wdbg!("Failed to check videos: {:?}", &e);
+                wdbg!("Failed to check videos: {}", &e);
             }
         }
     }
@@ -53,7 +55,11 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let youtube_api_key = youtube_api_key.clone();
             async move { channel_data(handle, youtube_api_key).await }
         })
-        .post_async("/register", |req, _ctx| {
+        .post_async("/account", |req, _ctx| {
+            let mut kv = kv.clone();
+            async move { register(req, &mut kv).await }
+        })
+        .delete_async("/account", |req, _ctx| {
             let mut kv = kv.clone();
             async move { register(req, &mut kv).await }
         })
@@ -71,7 +77,7 @@ pub async fn register(req: Request, kv: &mut KvStore) -> Result<Response> {
         }
     };
 
-    let api_key = match register_user(settings, kv).await {
+    let api_key = match create_account(settings, kv).await {
         Ok(api_key) => api_key,
         Err(e) => {
             return Response::error(e.to_string(), 400);
@@ -82,7 +88,22 @@ pub async fn register(req: Request, kv: &mut KvStore) -> Result<Response> {
         "api_key": api_key,
     });
 
-    Response::from_json(&response)
+    Ok(Response::from_json(&response).unwrap().with_status(201))
+}
+
+pub async fn unregister(req: Request, kv: &mut KvStore) -> Result<Response> {
+    let Ok(Some(api_key)) = req.headers().get("X-API-KEY") else {
+        return Response::error("Missing X-API-KEY header", 400);
+    };
+
+    match delete_account(api_key, kv).await {
+        Ok(_) => {}
+        Err(e) => {
+            return Response::error(e.to_string(), 400);
+        }
+    };
+
+    Ok(Response::ok("OK")?.with_status(204))
 }
 
 pub async fn channel_data(handle: Option<String>, youtube_api_key: String) -> Result<Response> {

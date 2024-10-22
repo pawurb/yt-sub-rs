@@ -1,17 +1,11 @@
 use crate::{store::KvWrapper, user_settings_api::UserSettingsAPI};
 use chrono::{Timelike, Utc};
-use eyre::{OptionExt, Result};
+use eyre::Result;
 use wasm_rs_dbg::dbg as wdbg;
 use yt_sub_core::UserSettings;
 
 pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()> {
-    let settings_json = kv
-        .get_val(&api_key)
-        .await?
-        .ok_or_eyre("No settings found for user")?;
-
-    let settings: UserSettings =
-        serde_json::from_str(&settings_json).expect("Failed to parse settings");
+    let settings = UserSettings::read(&api_key, kv).await?;
 
     if !matching_schedule(&settings) {
         return Ok(());
@@ -29,6 +23,10 @@ pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()
                 wdbg!(format!("Error: {}", e));
             }
         }
+    }
+
+    if new_videos.is_empty() {
+        return Ok(());
     }
 
     for notifier in &settings.notifiers {

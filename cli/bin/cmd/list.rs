@@ -5,11 +5,13 @@ use eyre::Result;
 use yt_sub::user_settings_cli::UserSettingsCLI;
 use yt_sub_core::UserSettings;
 
+use crate::CONFIG_DESC;
+
 #[derive(Debug, Parser)]
 pub struct ListArgs {
     #[arg(
         long,
-        help = "Path to config file, deafult '~/.config/yt-sub-rs/config.toml'"
+        help = CONFIG_DESC
     )]
     config: Option<PathBuf>,
 }
