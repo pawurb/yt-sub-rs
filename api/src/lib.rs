@@ -61,7 +61,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         })
         .delete_async("/account", |req, _ctx| {
             let mut kv = kv.clone();
-            async move { register(req, &mut kv).await }
+            async move { unregister(req, &mut kv).await }
         })
         .run(req, env)
         .await

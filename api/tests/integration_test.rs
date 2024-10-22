@@ -42,7 +42,7 @@ async fn test_missing_handle() {
 async fn test_failed_register() {
     let client = Client::new();
     let res = client
-        .post("https://yt-sub-api.apki.workers.dev/register")
+        .post("https://yt-sub-api.apki.workers.dev/account")
         .send()
         .await
         .expect("Failed to send request");
