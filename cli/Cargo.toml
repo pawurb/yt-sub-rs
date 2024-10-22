@@ -7,7 +7,7 @@ license = "MIT"
 name = "yt-sub"
 readme = "../README.md"
 repository = "https://github.com/pawurb/yt-sub-rs"
-version = "0.1.6"
+version = "0.1.7"
 
 [profile.release]
 lto = true
