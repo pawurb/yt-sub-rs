@@ -40,10 +40,15 @@ impl UserSettingsAPI for UserSettings {
         }
 
         user_ids.retain(|id| id != api_key);
-        kv.put_val(USER_IDS_KEY, &user_ids.join(",")).await?;
+
+        if user_ids.is_empty() {
+            kv.delete_val(USER_IDS_KEY).await?;
+        } else {
+            kv.put_val(USER_IDS_KEY, &user_ids.join(",")).await?;
+        }
 
         kv.delete_val(api_key).await?;
-        kv.delete_val(&last_run_at_key(api_key)).await?;
+        _ = kv.delete_val(&last_run_at_key(api_key)).await;
 
         Ok(())
     }
@@ -139,6 +144,24 @@ mod tests {
         settings.touch_last_run_at(&mut kv).await?;
 
         assert!(settings.last_run_at(&kv).await? > Utc::now() - Duration::hours(1));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_delete_user_settings() -> Result<()> {
+        let settings = build_settings(true, None);
+        let mut kv = MockKvStore::default();
+
+        settings.save(&mut kv).await?;
+
+        let before: Vec<String> = UserSettings::list_ids(&kv).await?;
+        assert_eq!(before.len(), 1);
+
+        UserSettings::delete(&settings.api_key(), &mut kv).await?;
+
+        let after: Vec<String> = UserSettings::list_ids(&kv).await?;
+        assert_eq!(after.len(), 0);
+
         Ok(())
     }
 }

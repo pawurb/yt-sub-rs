@@ -26,8 +26,6 @@ async fn scheduled(_evt: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
         }
     };
 
-    wdbg!("Users: {:?}", &users);
-
     for user in users {
         match check_videos(user, &mut kv).await {
             Ok(_) => {}
@@ -36,8 +34,6 @@ async fn scheduled(_evt: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
             }
         }
     }
-
-    wdbg!("Hello from cron!");
 }
 
 #[event(fetch)]
@@ -103,7 +99,7 @@ pub async fn unregister(req: Request, kv: &mut KvStore) -> Result<Response> {
         }
     };
 
-    Ok(Response::ok("OK")?.with_status(204))
+    Response::ok("DELETED")
 }
 
 pub async fn channel_data(handle: Option<String>, youtube_api_key: String) -> Result<Response> {
@@ -125,23 +121,23 @@ pub async fn channel_data(handle: Option<String>, youtube_api_key: String) -> Re
     let mut res = Fetch::Request(rss_req).send().await?;
     let status = res.status_code();
 
-    if status == 200 {
-        let json: Value = res.json().await?;
-        let results = json["pageInfo"]["totalResults"].as_i64().unwrap();
-
-        if results == 0 {
-            return Response::error("No channel found", 404);
-        }
-
-        let channel_id = json["items"][0]["id"].as_str().unwrap();
-        let channel_name = json["items"][0]["snippet"]["title"].as_str().unwrap();
-        let response = json!({
-            "channel_id": channel_id,
-            "channel_name": channel_name,
-        });
-
-        Response::from_json(&response)
-    } else {
-        Response::error("Failed to fetch data", status)
+    if status != 200 {
+        return Response::error("Failed to fetch data", status);
     }
+
+    let json: Value = res.json().await?;
+    let results = json["pageInfo"]["totalResults"].as_i64().unwrap();
+
+    if results == 0 {
+        return Response::error("No channel found", 404);
+    }
+
+    let channel_id = json["items"][0]["id"].as_str().unwrap();
+    let channel_name = json["items"][0]["snippet"]["title"].as_str().unwrap();
+    let response = json!({
+        "channel_id": channel_id,
+        "channel_name": channel_name,
+    });
+
+    Response::from_json(&response)
 }

@@ -48,3 +48,14 @@ async fn test_failed_register() {
         .expect("Failed to send request");
     assert_eq!(res.status(), 400);
 }
+
+#[tokio::test]
+async fn test_failed_unregister() {
+    let client = Client::new();
+    let res = client
+        .delete("https://yt-sub-api.apki.workers.dev/account")
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(res.status(), 400);
+}
