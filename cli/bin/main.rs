@@ -2,8 +2,8 @@ use clap::{Parser, Subcommand};
 mod cmd;
 use cmd::{
     channel_data::ChannelDataArgs, follow::FollowArgs, init::InitArgs, list::ListArgs,
-    register::RegisterArgs, run::RunArgs, settings::SettingsArgs, unfollow::UnfollowArgs,
-    unregister::UnregisterArgs,
+    register::RegisterArgs, run::RunArgs, settings::SettingsArgs, sync::SyncArgs,
+    unfollow::UnfollowArgs, unregister::UnregisterArgs,
 };
 use eyre::Result;
 
@@ -36,6 +36,8 @@ pub enum SubSubcommand {
     Register(RegisterArgs),
     #[command(visible_alias = "un", about = "Remove remote account")]
     Unregister(UnregisterArgs),
+    #[command(visible_alias = "sc", about = "Update remote settings to match local")]
+    Sync(SyncArgs),
 }
 
 #[tokio::main]
@@ -51,6 +53,7 @@ async fn main() -> Result<()> {
         SubSubcommand::List(args) => args.run().await,
         SubSubcommand::Register(args) => args.run().await,
         SubSubcommand::Unregister(args) => args.run().await,
+        SubSubcommand::Sync(args) => args.run().await,
     };
 
     match res {

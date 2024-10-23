@@ -5,5 +5,6 @@ pub mod list;
 pub mod register;
 pub mod run;
 pub mod settings;
+pub mod sync;
 pub mod unfollow;
 pub mod unregister;

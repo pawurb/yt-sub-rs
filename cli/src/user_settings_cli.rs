@@ -21,6 +21,7 @@ pub trait UserSettingsCLI {
     fn default_path() -> PathBuf;
     async fn create_account(self, host: Option<&str>) -> Result<()>;
     async fn delete_account(&self, host: Option<&str>) -> Result<()>;
+    async fn sync_account(&self, host: Option<&str>) -> Result<()>;
 }
 
 impl UserSettingsCLI for UserSettings {
@@ -159,6 +160,31 @@ https://github.com/pawurb/yt-sub-rs#notifiers-configuration",
 
         Ok(())
     }
+    async fn sync_account(&self, host: Option<&str>) -> Result<()> {
+        if self.api_key.is_none() {
+            eyre::bail!("Remote account is not registered!")
+        }
+
+        _ = self.get_slack_notifier().ok_or_eyre(
+            "You must configure a Slack notifier to update a remote account:
+https://github.com/pawurb/yt-sub-rs#notifiers-configuration",
+        )?;
+        let client = Client::new();
+        let host = host.unwrap_or(API_HOST);
+
+        let res = client
+            .put(format!("{}/account", host))
+            .json(&self)
+            .send()
+            .await?;
+
+        if res.status() != 200 {
+            let err_msg = res.text().await?;
+            eyre::bail!("Failed to update remote account: {err_msg}")
+        }
+
+        Ok(())
+    }
 }
 
 fn last_run_at_path() -> PathBuf {
@@ -240,6 +266,7 @@ mod tests {
         let settings = build_settings(
             Some(path.clone()),
             Some("https://slack.com/XXX".to_string()),
+            None,
         );
 
         let settings = UserSettings {
@@ -272,6 +299,7 @@ mod tests {
         let settings = build_settings(
             Some(path.clone()),
             Some("https://slack.com/XXX".to_string()),
+            None,
         );
 
         let m = server
@@ -303,7 +331,7 @@ mod tests {
             .create_async()
             .await;
 
-        let settings = build_settings(None, Some("https://slack.com/XXX".to_string()));
+        let settings = build_settings(None, Some("https://slack.com/XXX".to_string()), None);
 
         if let Err(e) = settings.create_account(Some(&host)).await {
             assert!(e.to_string().contains("Registration failed"));
@@ -315,9 +343,37 @@ mod tests {
         Ok(())
     }
 
-    fn build_settings(path: Option<PathBuf>, slack_webhook: Option<String>) -> UserSettings {
+    #[tokio::test]
+    async fn test_sync_account_ok() -> Result<()> {
+        let mut server = Server::new_async().await;
+        let host = server.host_with_port();
+        let host = format!("http://{}", host);
+        let m = server
+            .mock("PUT", "/account")
+            .with_status(200)
+            .create_async()
+            .await;
+
+        let settings = build_settings(
+            None,
+            Some("https://slack.com/XXX".to_string()),
+            Some("test".into()),
+        );
+
+        settings.sync_account(Some(&host)).await?;
+
+        m.assert_async().await;
+        Ok(())
+    }
+
+    fn build_settings(
+        path: Option<PathBuf>,
+        slack_webhook: Option<String>,
+        api_key: Option<String>,
+    ) -> UserSettings {
         let path = path.unwrap_or(test_config_path());
-        let settings = UserSettings::default(path);
+        let mut settings = UserSettings::default(path);
+        settings.api_key = api_key;
 
         if let Some(webhook) = slack_webhook {
             let notifier = Notifier::Slack(SlackConfig {
@@ -325,12 +381,9 @@ mod tests {
                 channel: "test".to_string(),
             });
 
-            UserSettings {
-                notifiers: vec![notifier],
-                ..settings
-            }
-        } else {
-            settings
-        }
+            settings.notifiers = vec![notifier];
+        };
+
+        settings
     }
 }

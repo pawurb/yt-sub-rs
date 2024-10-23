@@ -1,7 +1,7 @@
 use crate::{store::KvWrapper, user_settings_api::UserSettingsAPI};
 use chrono::{Timelike, Utc};
 use eyre::Result;
-use wasm_rs_dbg::dbg as wdbg;
+use worker::console_log;
 use yt_sub_core::UserSettings;
 
 pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()> {
@@ -20,7 +20,7 @@ pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()
                 new_videos.extend(videos);
             }
             Err(e) => {
-                wdbg!(format!("Error: {}", e));
+                console_log!("Error: {}", e);
             }
         }
     }
@@ -38,7 +38,7 @@ pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()
         match notifier.notify(notifications, false).await {
             Ok(_) => {}
             Err(e) => {
-                wdbg!(&format!("Error: {e}"));
+                console_log!("Error: {e}");
             }
         }
     }
