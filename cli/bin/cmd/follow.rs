@@ -44,7 +44,8 @@ impl FollowArgs {
         let already_following_handle = settings.get_channel_by_handle(&handle);
 
         if already_following_id.is_some() || already_following_handle.is_some() {
-            let following = already_following_id.unwrap_or(already_following_handle.unwrap());
+            let following =
+                already_following_id.unwrap_or_else(|| already_following_handle.unwrap());
 
             eyre::bail!("You are already following this channel! \n\n{following}");
         }
@@ -72,7 +73,7 @@ impl FollowArgs {
         println!(
             "You are now following:
 
-{channel}!"
+{channel}"
         );
 
         if settings.api_key.is_some() {
