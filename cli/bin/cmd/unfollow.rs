@@ -44,6 +44,17 @@ impl UnfollowArgs {
 
         println!("You've unfollowed {desc}!", desc = to_unfollow.description);
 
+        if settings.api_key.is_some() {
+            match settings.sync_account(None).await {
+                Ok(_) => {
+                    println!("Remote account data was updated.");
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e)
+                }
+            }
+        }
+
         Ok(())
     }
 }
