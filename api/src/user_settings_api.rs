@@ -76,7 +76,16 @@ impl UserSettingsAPI for UserSettings {
             kv.put_val(USER_IDS_KEY, &user_ids.join(",")).await?;
         }
 
+        if self.channels.len() > 100 {
+            eyre::bail!("Too many channels!")
+        }
+
+        if self.notifiers.len() > 5 {
+            eyre::bail!("Too many notifiers!")
+        }
+
         let json = serde_json::to_string(&self)?;
+
         kv.put_val(&self.api_key(), &json).await?;
 
         Ok(())
