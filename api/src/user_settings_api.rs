@@ -71,12 +71,10 @@ impl UserSettingsAPI for UserSettings {
     async fn save(&self, kv: &mut impl KvWrapper) -> Result<()> {
         let mut user_ids = Self::list_ids(kv).await?;
 
-        if user_ids.contains(&self.api_key()) {
-            eyre::bail!("Duplicate API key")
+        if !user_ids.contains(&self.api_key()) {
+            user_ids.push(self.api_key().clone());
+            kv.put_val(USER_IDS_KEY, &user_ids.join(",")).await?;
         }
-
-        user_ids.push(self.api_key().clone());
-        kv.put_val(USER_IDS_KEY, &user_ids.join(",")).await?;
 
         let json = serde_json::to_string(&self)?;
         kv.put_val(&self.api_key(), &json).await?;
