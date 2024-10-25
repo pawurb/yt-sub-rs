@@ -1,6 +1,6 @@
 # yt-sub-rs [![Latest Version](https://img.shields.io/crates/v/yt-sub.svg)](https://crates.io/crates/yt-sub) [![GH Actions](https://github.com/pawurb/yt-sub-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/pawurb/yt-sub-rs/actions)
 
-yt-sub is a simple CLI for subscribing to YouTube RSS feeds without using a YouTube account.
+yt-sub is a simple CLI for subscribing to YouTube RSS feeds without using a YouTube account, powered by [CloudFlare Workers](https://workers.cloudflare.com/) backend. Receive Slack notifications about fresh videos based on the configurable schedule.
 
 ## Usage
 
@@ -17,6 +17,9 @@ Commands:
   follow        Subscribe to a channel [aliases: f]
   unfollow      Unsubscribe [aliases: u]
   list          List followed channels [aliases: l]
+  register      Register remote account [aliases: re]
+  unregister    Remove remote account [aliases: un]
+  sync          Update remote settings to match local [aliases: sc]
   help          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -39,13 +42,12 @@ ytsub init
 `~/.config/yt-sub-rs/config.toml`
 ```toml
 channels = []
-last_run_at_path = "~/.yt-sub-rs/last_run_at.txt"
 
 [[notifiers]]
 Log = []
 ```
 
-Follow preferred channels based on [their URL handle](https://www.youtube.com/@ManofRecaps):
+Follow preferred channels based on [their URL handle](https://support.google.com/youtube/answer/11585688?sjid=4360661106629707574-EU):
 
 ```bash
 ytsub follow --handle @ManofRecaps
@@ -91,6 +93,42 @@ You can unfollow a channel by typing:
 ytsub unfollow --handle @ManofRecaps
 ```
 
+## Remote account
+
+By registering a remote account, you'll receive Slack notifications about new videos without executting the CLI locally.
+
+To do it run:
+
+```bash
+ytsub register
+```
+
+it will persist your API key in the config file. You must configure Slack notifications to use this feature. 
+
+If your account is registered `follow` and `unfollow` commands will automatically update your remote data. If you change the config file manually, you have to run:
+
+```bash
+ytsub sync
+```
+
+By default, new videos are checked once every hour. Optionally, you can define a notification schedule like this:
+
+`~/.config/yt-sub-rs/config.toml`
+
+```toml
+schedule = [8, 20]
+```
+
+Numbers represent UTC hours when notifications should be sent.
+
+Don't forget to run `sync` after updating this config.
+
+You can remove all your remote data by running:
+
+```bash
+ytsub unregister
+```
+
 ## Notifiers configuration
 
 By default, CLI is configured to log to the `stdout`. You can configure Slack notifications like this:
@@ -123,12 +161,13 @@ This snippet works on Firefox. Alternatively, you can look for this value manual
 Now you can subscribe by providing all the data like this:
 
 ```bash
-sub follow --handle @ManofRecaps --channel-id UCNCTxLZ3EKKry-oWgLlsYsw --desc 'Man of Recaps'
+ytsub follow --handle @ManofRecaps --channel-id UCNCTxLZ3EKKry-oWgLlsYsw --desc 'Man of Recaps'
 ```
+
 
 ## CRON invocation
 
-Currently, a recommended way to use the CLI is via the CRON scheduler. By appending the `--cron` flag to the `run` command CLI will output the logs with timestamps:
+Alternatively, you can use the CLI via the CRON scheduler to receive notifications without a remote account. By appending the `--cron` flag to the `run` command CLI will output the logs with timestamps:
 
 ```
 RUST_LOG=info ytsub run --cron
