@@ -1,0 +1,22 @@
+use tracing::info;
+use yt_sub_api::{
+    lite_helpers::{init_lite_db, sqlite_conn},
+    routes::app,
+};
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt::init();
+    init_lite_db(None).await.expect("Failed to init sqlite db");
+    let conn = sqlite_conn(None)
+        .await
+        .expect("Failed to connect to sqlite db");
+    let app = app(conn).await;
+
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+        .await
+        .unwrap();
+    info!("listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, app).await.unwrap();
+}

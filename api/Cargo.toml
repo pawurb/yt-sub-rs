@@ -6,32 +6,45 @@ publish = false
 edition = "2021"
 authors = ["pawurb <contact@pawelurbanek.com>"]
 
+[[bin]]
+name = "scan_yt_videos"
+path = "bin/scan_yt_videos.rs"
+
+[[bin]]
+name = "start_server"
+path = "bin/start_server.rs"
+
 [package.metadata.release]
 release = false
 
 [profile.release]
 lto = true
 
-# https://github.com/rustwasm/wasm-pack/issues/1247
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
-
-[lib]
-crate-type = ["cdylib"]
-
 [dependencies]
-worker = { version = "0.4.2" }
-worker-macros = { version = "0.4.2" }
-console_error_panic_hook = { version = "0.1.1" }
 serde_json = "1.0.128"
-
 yt-sub-core = "0.1.6"
 # yt-sub-core = { path = "../core" }
 eyre = "0.6.12"
 uuid = { version = "1.11.0", features = ["v4", "js"] }
 chrono = "0.4.38"
+openssl = { version = "0.10", features = ["vendored"] }
+axum = "0.7.7"
+sqlx = { version = "0.8.2", features = [
+  "sqlite",
+  "chrono",
+  "runtime-tokio-rustls",
+] }
+reqwest = "0.12"
+tokio = { version = "1.40", features = ["full"] }
+serde = "1.0.214"
+tracing-subscriber = "0.3.18"
+tracing = "0.1.40"
+tower-http = { version = "0.6.1", features = ["trace"] }
+tower = "0.5.1"
+futures = "0.3.31"
 
 [dev-dependencies]
+glob = "0.3.1"
 reqwest = { version = "0.12", features = ["json"] }
 mockito = "1.5.0"
-tokio = { version = "1.40", features = ["full"] }
+http-body-util = "0.1.2"

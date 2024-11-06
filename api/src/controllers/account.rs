@@ -1,18 +1,89 @@
+use axum::{
+    body::Body,
+    http::{HeaderMap, HeaderValue},
+    response::{IntoResponse, Response},
+};
 use eyre::Result;
+use reqwest::StatusCode;
+use serde_json::json;
+use sqlx::SqlitePool;
 use uuid::Uuid;
 use yt_sub_core::UserSettings;
 
-use crate::{store::KvWrapper, user_settings_api::UserSettingsAPI};
+use crate::{lite_helpers::UserRow, routes::invalid_req, user_settings_api::UserSettingsAPI};
 
-pub async fn create_account(settings: UserSettings, kv: &mut impl KvWrapper) -> Result<String> {
+pub async fn update(settings: UserSettings, conn: &SqlitePool) -> Response<Body> {
+    let Some(api_key) = settings.api_key.clone() else {
+        return invalid_req("Missing API key!");
+    };
+
+    let exists = match UserRow::exists(&api_key, conn).await {
+        Ok(exists) => exists,
+        Err(e) => {
+            return invalid_req(&e.to_string());
+        }
+    };
+
+    if !exists {
+        return invalid_req("Invalid API key!");
+    }
+
+    if settings.get_slack_notifier().is_none() {
+        return invalid_req("Missing Slack notifier settings");
+    }
+
+    match settings.save(conn).await {
+        Ok(_) => {}
+        Err(e) => {
+            return invalid_req(&e.to_string());
+        }
+    }
+
+    "UPDATED".into_response()
+}
+
+pub async fn delete(headers: HeaderMap, conn: &SqlitePool) -> Response<Body> {
+    let api_key = match headers.get("X-API-KEY") {
+        Some(api_key) => api_key.to_str().unwrap(),
+        None => return invalid_req("Missing X-API-KEY header"),
+    };
+
+    match UserSettings::read(api_key, conn).await {
+        Ok(_) => {}
+        Err(e) => {
+            return invalid_req(&e.to_string());
+        }
+    }
+
+    // TODO macro
+    match UserSettings::delete(api_key, conn).await {
+        Ok(_) => {}
+        Err(e) => {
+            return invalid_req(&e.to_string());
+        }
+    }
+
+    "DELETED".into_response()
+}
+
+pub async fn create(settings: UserSettings, conn: &SqlitePool) -> Response<Body> {
+    let response = match create_impl(settings, conn).await {
+        Ok(response) => response,
+        Err(e) => return invalid_req(&e.to_string()).into_response(),
+    };
+
+    let mut headers = HeaderMap::new();
+    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+
+    (StatusCode::CREATED, headers, response).into_response()
+}
+
+async fn create_impl(settings: UserSettings, conn: &SqlitePool) -> Result<String> {
     if let Some(api_key) = settings.api_key {
-        if kv.get_val(&api_key).await?.is_some() {
-            eyre::bail!("Already registered with API key: {}", api_key)
+        if UserRow::exists(&api_key, conn).await? {
+            eyre::bail!("Already registered with this API key");
         } else {
-            eyre::bail!(
-                "Invalid API key present: '{}'. Please remove it and try again",
-                api_key
-            );
+            eyre::bail!("Invalid API key present. Please remove it and try again.");
         }
     }
 
@@ -46,22 +117,29 @@ pub async fn create_account(settings: UserSettings, kv: &mut impl KvWrapper) -> 
         ..settings
     };
 
-    settings.save(kv).await?;
+    settings.save(conn).await?;
 
-    Ok(api_key.to_string())
+    let response = json!({
+        "api_key": api_key,
+    });
+
+    Ok(response.to_string())
 }
 
 #[cfg(test)]
 pub mod tests {
     use mockito::Server;
+    use serde_json::Value;
     use std::path::PathBuf;
     use yt_sub_core::notifier::{Notifier, SlackConfig};
 
-    use crate::store::tests::MockKvStore;
+    use crate::lite_helpers::tests::setup_test_db;
 
     use super::*;
     #[tokio::test]
-    async fn test_happy_path() -> Result<()> {
+    async fn create_happy_path() -> Result<()> {
+        let (conn, _cl) = setup_test_db().await;
+
         let mut server = Server::new_async().await;
         let host = server.host_with_port();
         let host = format!("http://{}", host);
@@ -73,19 +151,15 @@ pub mod tests {
             .await;
 
         let settings = build_settings(false, Some(format!("{}/slack_webhook", host)));
-        let mut kv = MockKvStore::default();
-
-        let api_key = create_account(settings, &mut kv)
+        let json = create_impl(settings, &conn)
             .await
             .expect("Failed to register user");
 
-        let settings_json = kv.get_val(&api_key).await.unwrap().unwrap();
+        let json: Value = serde_json::from_str(&json).expect("Failed to parse JSON");
+        let api_key = json["api_key"].as_str().unwrap();
 
-        let _settings: UserSettings =
-            serde_json::from_str(&settings_json).expect("Failed to parse settings JSON");
-
-        let ids = kv.get_val("user_ids").await.unwrap().unwrap();
-        assert_eq!(ids, api_key);
+        let exists = UserRow::exists(api_key, &conn).await?;
+        assert!(exists);
 
         m.assert_async().await;
 
@@ -94,10 +168,10 @@ pub mod tests {
 
     #[tokio::test]
     async fn test_invalid_api_key() -> Result<()> {
+        let (conn, _cl) = setup_test_db().await;
         let settings = build_settings(true, None);
-        let mut kv = MockKvStore::default();
 
-        if let Err(e) = create_account(settings, &mut kv).await {
+        if let Err(e) = create_impl(settings, &conn).await {
             assert!(e.to_string().contains("Invalid API key present"));
         } else {
             panic!("Expected an error!");
@@ -107,28 +181,11 @@ pub mod tests {
     }
 
     #[tokio::test]
-    async fn test_registered_api_key() -> Result<()> {
-        let settings = build_settings(true, None);
-        let mut kv = MockKvStore::default();
-
-        kv.put_val(&settings.api_key.clone().unwrap(), "true")
-            .await?;
-
-        if let Err(e) = create_account(settings, &mut kv).await {
-            assert!(e.to_string().contains("Already registered"));
-        } else {
-            panic!("Expected an error!");
-        }
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_slack_not_configured() -> Result<()> {
+    async fn create_slack_not_configured() -> Result<()> {
+        let (conn, _cl) = setup_test_db().await;
         let settings = build_settings(false, None);
-        let mut kv = MockKvStore::default();
 
-        if let Err(e) = create_account(settings, &mut kv).await {
+        if let Err(e) = create_impl(settings, &conn).await {
             assert!(e.to_string().contains("Missing Slack notifier settings"));
         } else {
             panic!("Expected an error!");
@@ -139,6 +196,8 @@ pub mod tests {
 
     #[tokio::test]
     async fn test_slack_notification_failed() -> Result<()> {
+        let (conn, _cl) = setup_test_db().await;
+
         let mut server = Server::new_async().await;
         let host = server.host_with_port();
         let host = format!("http://{}", host);
@@ -150,9 +209,8 @@ pub mod tests {
             .await;
 
         let settings = build_settings(false, Some(format!("{}/slack_webhook", host)));
-        let mut kv = MockKvStore::default();
 
-        if let Err(e) = create_account(settings, &mut kv).await {
+        if let Err(e) = create_impl(settings, &conn).await {
             assert!(e.to_string().contains("Invalid slack webhook URL"));
         } else {
             panic!("Expected an error!");
@@ -168,7 +226,7 @@ pub mod tests {
 
         let settings = if with_api_key {
             UserSettings {
-                api_key: Some("test".to_string()),
+                api_key: Some(Uuid::new_v4().to_string()),
                 ..settings
             }
         } else {

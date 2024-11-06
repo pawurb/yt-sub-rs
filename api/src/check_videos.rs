@@ -1,17 +1,18 @@
-use crate::{store::KvWrapper, user_settings_api::UserSettingsAPI};
+use crate::{lite_helpers::sqlite_conn, user_settings_api::UserSettingsAPI};
 use chrono::{Timelike, Utc};
 use eyre::Result;
-use worker::console_log;
 use yt_sub_core::UserSettings;
 
-pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()> {
-    let settings = UserSettings::read(&api_key, kv).await?;
+pub async fn check_videos(api_key: String) -> Result<()> {
+    let conn = sqlite_conn(None).await?;
+
+    let settings = UserSettings::read(&api_key, &conn).await?;
 
     if !matching_schedule(&settings) {
         return Ok(());
     }
 
-    let last_run_at = settings.last_run_at(kv).await?;
+    let last_run_at = settings.last_run_at(&conn).await?;
     let mut new_videos = vec![];
 
     for channel in &settings.channels {
@@ -20,7 +21,7 @@ pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()
                 new_videos.extend(videos);
             }
             Err(e) => {
-                console_log!("Error: {}", e);
+                tracing::error!("Error: {}", e);
             }
         }
     }
@@ -38,12 +39,12 @@ pub async fn check_videos(api_key: String, kv: &mut impl KvWrapper) -> Result<()
         match notifier.notify(notifications, false).await {
             Ok(_) => {}
             Err(e) => {
-                console_log!("Error: {e}");
+                tracing::error!("Error: {e}");
             }
         }
     }
 
-    settings.touch_last_run_at(kv).await?;
+    settings.touch_last_run_at(&conn).await?;
 
     Ok(())
 }

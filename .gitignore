@@ -3,3 +3,7 @@ api/wrangler.toml
 api/.wrangler  
 cli/target
 core/target
+*.db-shm
+*.db
+*.db-wal
+
