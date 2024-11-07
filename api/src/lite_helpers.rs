@@ -8,7 +8,7 @@ use sqlx::{
     Row, Sqlite, SqlitePool,
 };
 
-use tracing::{error, info};
+use tracing::info;
 use yt_sub_core::UserSettings;
 
 //TODO lazy default ENV
@@ -35,7 +35,7 @@ pub async fn init_lite_db(db_url: Option<&str>) -> Result<()> {
     let db_url = db_url.unwrap_or(LITE_DB_URL);
 
     if Sqlite::database_exists(db_url).await.unwrap_or(false) {
-        error!("Database {} already exists", db_url);
+        info!("Database {} already exists", db_url);
         return Ok(());
     }
 
