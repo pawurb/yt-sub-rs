@@ -1,3 +1,4 @@
+use eyre::Result;
 use tracing::info;
 use yt_sub_api::{
     config::routes::app,
@@ -5,8 +6,11 @@ use yt_sub_api::{
 };
 
 #[tokio::main]
-async fn main() {
-    tracing_subscriber::fmt::init();
+async fn main() -> Result<()> {
+    let file_appender = tracing_appender::rolling::never("./", "server.log");
+
+    tracing_subscriber::fmt().with_writer(file_appender).init();
+
     init_lite_db(None).await.expect("Failed to init sqlite db");
     let conn = sqlite_conn(None)
         .await
@@ -19,4 +23,6 @@ async fn main() {
         .unwrap();
     info!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+
+    Ok(())
 }

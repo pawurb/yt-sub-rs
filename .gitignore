@@ -6,4 +6,5 @@ core/target
 *.db-shm
 *.db
 *.db-wal
+*.log
 
