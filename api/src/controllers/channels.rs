@@ -10,7 +10,7 @@ use reqwest::{
 };
 use serde_json::{json, Value};
 
-use crate::routes::invalid_req;
+use crate::config::routes::invalid_req;
 
 #[derive(Debug)]
 pub struct ChannelData {

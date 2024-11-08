@@ -1,7 +1,7 @@
 use tracing::info;
 use yt_sub_api::{
+    config::routes::app,
     lite_helpers::{init_lite_db, sqlite_conn},
-    routes::app,
 };
 
 #[tokio::main]
