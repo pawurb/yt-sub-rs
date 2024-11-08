@@ -1,5 +1,5 @@
-pub mod check_videos;
+pub mod config;
 pub mod controllers;
 pub mod lite_helpers;
-pub mod routes;
+pub mod tasks;
 pub mod user_settings_api;

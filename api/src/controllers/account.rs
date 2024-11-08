@@ -10,7 +10,9 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 use yt_sub_core::UserSettings;
 
-use crate::{lite_helpers::UserRow, routes::invalid_req, user_settings_api::UserSettingsAPI};
+use crate::{
+    config::routes::invalid_req, lite_helpers::UserRow, user_settings_api::UserSettingsAPI,
+};
 
 pub async fn update(settings: UserSettings, conn: &SqlitePool) -> Response<Body> {
     let Some(api_key) = settings.api_key.clone() else {

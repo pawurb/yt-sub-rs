@@ -7,12 +7,12 @@ edition = "2021"
 authors = ["pawurb <contact@pawelurbanek.com>"]
 
 [[bin]]
-name = "scan_yt_videos"
-path = "bin/scan_yt_videos.rs"
+name = "server"
+path = "bin/server.rs"
 
 [[bin]]
-name = "start_server"
-path = "bin/start_server.rs"
+name = "scheduler"
+path = "bin/scheduler.rs"
 
 [package.metadata.release]
 release = false
@@ -42,6 +42,7 @@ tracing = "0.1.40"
 tower-http = { version = "0.6.1", features = ["trace"] }
 tower = "0.5.1"
 futures = "0.3.31"
+tokio-cron-scheduler = { version = "0.13.0", features = ["signal", "english"] }
 
 [dev-dependencies]
 glob = "0.3.1"

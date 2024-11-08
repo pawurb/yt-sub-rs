@@ -3,7 +3,31 @@ use chrono::{Timelike, Utc};
 use eyre::Result;
 use yt_sub_core::UserSettings;
 
-pub async fn check_videos(api_key: String) -> Result<()> {
+pub async fn run_check_videos() -> Result<()> {
+    let conn = sqlite_conn(None).await?;
+
+    let ids = match UserSettings::ids(&conn).await {
+        Ok(ids) => ids,
+        Err(e) => {
+            tracing::error!("Failed to list ids: {}", &e);
+            return Ok(());
+        }
+    };
+
+    tracing::info!("Checking videos for {} users", ids.len());
+
+    for user_id in ids {
+        match check_videos(user_id).await {
+            Ok(_) => {}
+            Err(e) => {
+                tracing::error!("Failed to check videos: {}", &e);
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn check_videos(api_key: String) -> Result<()> {
     let conn = sqlite_conn(None).await?;
 
     let settings = UserSettings::read(&api_key, &conn).await?;
