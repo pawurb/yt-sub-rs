@@ -57,7 +57,6 @@ impl UserSettings {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use eyre::Result;
     #[tokio::test]

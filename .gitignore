@@ -1,8 +1,4 @@
-api/target
-api/wrangler.toml
-api/.wrangler  
-cli/target
-core/target
+*/target
 *.db-shm
 *.db
 *.db-wal
