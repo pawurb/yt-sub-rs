@@ -3,63 +3,35 @@ use std::sync::Arc;
 use crate::controllers;
 use axum::{
     body::Body,
-    extract::Path,
-    http::{HeaderMap, Response, StatusCode},
+    http::{Response, StatusCode},
     response::IntoResponse,
     routing::{delete, get, post, put},
-    Json, Router,
+    Router,
 };
 use sqlx::SqlitePool;
 use tower_http::trace::{self, TraceLayer};
 use tracing::Level;
-use yt_sub_core::UserSettings;
+
+#[derive(Clone, Debug)]
+pub struct AppState {
+    pub conn: Arc<SqlitePool>,
+}
 
 pub async fn app(conn: Arc<SqlitePool>) -> Router {
+    let state = AppState { conn };
+
     Router::new()
-        .route("/channel_data/:handle", get({
-          move |handle: Path<String>| async move {
-            controllers::channels::show(handle.to_string()).await
-          }
-        }))
-        .route(
-            "/account",
-            post({
-                let conn = conn.clone();
-                |Json(settings): Json<UserSettings>| async move {
-                    controllers::account::create(settings, &conn).await
-                }
-            }),
-        )
-        .route(
-            "/account",
-            delete({
-                let conn = conn.clone();
-                |headers: HeaderMap| async move {
-                  controllers::account::delete(headers, &conn).await
-                }
-            }),
-        )
-        .route(
-            "/account",
-            put({
-                let conn = conn.clone();
-                move |Json(settings): Json<UserSettings>| async move {
-                    controllers::account::update(settings, &conn).await
-                }
-            }),
-        )
-        .route("/uptime", get(
-          {
-            || async move {
-                "OK".into_response()
-            }
-          }
-        ))
+        .route("/channel_data/:handle", get(controllers::channels::show))
+        .route("/account", post(controllers::account::create))
+        .route("/account", delete(controllers::account::delete))
+        .route("/account", put(controllers::account::update))
+        .route("/uptime", get(|| async move { "OK".into_response() }))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
                 .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
         )
+        .with_state(state)
 }
 
 pub fn invalid_req(reason: &str) -> Response<Body> {

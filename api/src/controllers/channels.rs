@@ -1,7 +1,6 @@
 use axum::{
-    body::Body,
     http::{HeaderMap, HeaderValue},
-    response::{IntoResponse, Response},
+    response::IntoResponse,
 };
 use eyre::Result;
 use reqwest::{
@@ -18,7 +17,7 @@ pub struct ChannelData {
     pub channel_name: String,
 }
 
-pub async fn show(handle: String) -> Response<Body> {
+pub async fn show(handle: String) -> impl IntoResponse {
     let response = match show_impl(Some(handle.to_string())).await {
         Ok(Some(response)) => response,
         Ok(None) => {

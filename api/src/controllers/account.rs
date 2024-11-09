@@ -1,7 +1,8 @@
 use axum::{
-    body::Body,
+    extract::State,
     http::{HeaderMap, HeaderValue},
-    response::{IntoResponse, Response},
+    response::IntoResponse,
+    Json,
 };
 use eyre::Result;
 use reqwest::StatusCode;
@@ -11,10 +12,16 @@ use uuid::Uuid;
 use yt_sub_core::UserSettings;
 
 use crate::{
-    config::routes::invalid_req, lite_helpers::UserRow, user_settings_api::UserSettingsAPI,
+    config::routes::{invalid_req, AppState},
+    lite_helpers::UserRow,
+    user_settings_api::UserSettingsAPI,
 };
 
-pub async fn update(settings: UserSettings, conn: &SqlitePool) -> Response<Body> {
+pub async fn update(
+    State(state): State<AppState>,
+    Json(settings): Json<UserSettings>,
+) -> impl IntoResponse {
+    let conn = &state.conn.clone();
     let Some(api_key) = settings.api_key.clone() else {
         return invalid_req("Missing API key!");
     };
@@ -44,7 +51,8 @@ pub async fn update(settings: UserSettings, conn: &SqlitePool) -> Response<Body>
     "UPDATED".into_response()
 }
 
-pub async fn delete(headers: HeaderMap, conn: &SqlitePool) -> Response<Body> {
+pub async fn delete(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let conn = &state.conn.clone();
     let api_key = match headers.get("X-API-KEY") {
         Some(api_key) => api_key.to_str().unwrap(),
         None => return invalid_req("Missing X-API-KEY header"),
@@ -68,7 +76,11 @@ pub async fn delete(headers: HeaderMap, conn: &SqlitePool) -> Response<Body> {
     "DELETED".into_response()
 }
 
-pub async fn create(settings: UserSettings, conn: &SqlitePool) -> Response<Body> {
+pub async fn create(
+    State(state): State<AppState>,
+    Json(settings): Json<UserSettings>,
+) -> impl IntoResponse {
+    let conn = &state.conn.clone();
     let response = match create_impl(settings, conn).await {
         Ok(response) => response,
         Err(e) => return invalid_req(&e.to_string()).into_response(),
