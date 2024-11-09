@@ -1,4 +1,5 @@
 use axum::{
+    extract::Path,
     http::{HeaderMap, HeaderValue},
     response::IntoResponse,
 };
@@ -17,7 +18,7 @@ pub struct ChannelData {
     pub channel_name: String,
 }
 
-pub async fn show(handle: String) -> impl IntoResponse {
+pub async fn show(handle: Path<String>) -> impl IntoResponse {
     let response = match show_impl(Some(handle.to_string())).await {
         Ok(Some(response)) => response,
         Ok(None) => {
