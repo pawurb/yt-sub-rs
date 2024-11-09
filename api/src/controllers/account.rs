@@ -1,18 +1,13 @@
-use axum::{
-    extract::State,
-    http::{HeaderMap, HeaderValue},
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::HeaderMap, response::IntoResponse, Json};
 use eyre::Result;
 use reqwest::StatusCode;
-use serde_json::json;
+use serde_json::{json, Value};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 use yt_sub_core::UserSettings;
 
 use crate::{
-    config::routes::{invalid_req, AppState},
+    config::routes::{invalid_req, json_response, AppState},
     lite_helpers::UserRow,
     user_settings_api::UserSettingsAPI,
 };
@@ -86,13 +81,10 @@ pub async fn create(
         Err(e) => return invalid_req(&e.to_string()).into_response(),
     };
 
-    let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-
-    (StatusCode::CREATED, headers, response).into_response()
+    json_response(response, StatusCode::CREATED)
 }
 
-async fn create_impl(settings: UserSettings, conn: &SqlitePool) -> Result<String> {
+async fn create_impl(settings: UserSettings, conn: &SqlitePool) -> Result<Value> {
     if let Some(api_key) = settings.api_key {
         if UserRow::exists(&api_key, conn).await? {
             eyre::bail!("Already registered with this API key");
@@ -133,17 +125,14 @@ async fn create_impl(settings: UserSettings, conn: &SqlitePool) -> Result<String
 
     settings.save(conn).await?;
 
-    let response = json!({
+    Ok(json!({
         "api_key": api_key,
-    });
-
-    Ok(response.to_string())
+    }))
 }
 
 #[cfg(test)]
 pub mod tests {
     use mockito::Server;
-    use serde_json::Value;
     use std::path::PathBuf;
     use yt_sub_core::notifier::{Notifier, SlackConfig};
 
@@ -169,7 +158,6 @@ pub mod tests {
             .await
             .expect("Failed to register user");
 
-        let json: Value = serde_json::from_str(&json).expect("Failed to parse JSON");
         let api_key = json["api_key"].as_str().unwrap();
 
         let exists = UserRow::exists(api_key, &conn).await?;

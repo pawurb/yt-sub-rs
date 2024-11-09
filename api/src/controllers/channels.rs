@@ -1,8 +1,4 @@
-use axum::{
-    extract::Path,
-    http::{HeaderMap, HeaderValue},
-    response::IntoResponse,
-};
+use axum::{extract::Path, response::IntoResponse};
 use eyre::Result;
 use reqwest::{
     header::{HeaderMap as ReHeaderMap, CONTENT_TYPE},
@@ -10,7 +6,7 @@ use reqwest::{
 };
 use serde_json::{json, Value};
 
-use crate::config::routes::invalid_req;
+use crate::config::routes::{invalid_req, json_response};
 
 #[derive(Debug)]
 pub struct ChannelData {
@@ -27,13 +23,10 @@ pub async fn show(handle: Path<String>) -> impl IntoResponse {
         Err(e) => return invalid_req(&e.to_string()),
     };
 
-    let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-
-    response.to_string().into_response()
+    json_response(response, StatusCode::OK)
 }
 
-async fn show_impl(handle: Option<String>) -> Result<Option<String>> {
+async fn show_impl(handle: Option<String>) -> Result<Option<Value>> {
     let youtube_api_key =
         std::env::var("YOUTUBE_API_KEY").expect("Missing YOUTUBE_API_KEY env var");
 
@@ -66,10 +59,8 @@ async fn show_impl(handle: Option<String>) -> Result<Option<String>> {
     let channel_id = json["items"][0]["id"].as_str().unwrap();
     let channel_name = json["items"][0]["snippet"]["title"].as_str().unwrap();
 
-    let response = json!({
+    Ok(Some(json!({
         "channel_id": channel_id,
         "channel_name": channel_name
-    });
-
-    Ok(Some(response.to_string()))
+    })))
 }

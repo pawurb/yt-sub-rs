@@ -3,11 +3,12 @@ use std::sync::Arc;
 use crate::controllers;
 use axum::{
     body::Body,
-    http::{Response, StatusCode},
+    http::{HeaderMap, HeaderValue, Response, StatusCode},
     response::IntoResponse,
     routing::{delete, get, post, put},
     Router,
 };
+use serde_json::Value;
 use sqlx::SqlitePool;
 
 #[derive(Clone, Debug)]
@@ -29,6 +30,13 @@ pub async fn app(conn: Arc<SqlitePool>) -> Router {
 
 pub fn invalid_req(reason: &str) -> Response<Body> {
     (StatusCode::BAD_REQUEST, reason.to_string()).into_response()
+}
+
+pub fn json_response(body: Value, status: StatusCode) -> Response<Body> {
+    let mut headers = HeaderMap::new();
+    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+
+    (status, headers, body.to_string()).into_response()
 }
 
 #[cfg(test)]
