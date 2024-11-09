@@ -1,7 +1,7 @@
 use eyre::Result;
 use tracing::info;
 use yt_sub_api::{
-    config::routes::app,
+    config::{middleware::middleware, routes::app},
     lite_helpers::{init_lite_db, sqlite_conn},
 };
 
@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     let conn = sqlite_conn(None)
         .await
         .expect("Failed to connect to sqlite db");
-    let app = app(conn).await;
+    let app = app(conn).await.layer(middleware());
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))

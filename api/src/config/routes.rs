@@ -9,8 +9,6 @@ use axum::{
     Router,
 };
 use sqlx::SqlitePool;
-use tower_http::trace::{self, TraceLayer};
-use tracing::Level;
 
 #[derive(Clone, Debug)]
 pub struct AppState {
@@ -26,11 +24,6 @@ pub async fn app(conn: Arc<SqlitePool>) -> Router {
         .route("/account", delete(controllers::account::delete))
         .route("/account", put(controllers::account::update))
         .route("/uptime", get(|| async move { "OK".into_response() }))
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
-                .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
-        )
         .with_state(state)
 }
 
