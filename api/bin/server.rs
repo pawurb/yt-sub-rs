@@ -1,15 +1,16 @@
 use eyre::Result;
 use tracing::info;
 use yt_sub_api::{
-    config::{middleware::middleware, routes::app},
+    config::{
+        middleware::{init_logs, middleware},
+        routes::app,
+    },
     lite_helpers::{init_lite_db, sqlite_conn},
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let file_appender = tracing_appender::rolling::never("./", "server.log");
-
-    tracing_subscriber::fmt().with_writer(file_appender).init();
+    init_logs("server.log");
 
     init_lite_db(None).await.expect("Failed to init sqlite db");
     let conn = sqlite_conn(None)

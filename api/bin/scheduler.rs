@@ -1,12 +1,10 @@
 use eyre::Result;
 use std::time::Duration;
-use yt_sub_api::config::schedule::get_schedule;
+use yt_sub_api::config::{middleware::init_logs, schedule::get_schedule};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let file_appender = tracing_appender::rolling::never("./", "scheduler.log");
-
-    tracing_subscriber::fmt().with_writer(file_appender).init();
+    init_logs("scheduler.log");
 
     let sched = get_schedule().await?;
     sched.start().await?;
