@@ -1,6 +1,6 @@
 # yt-sub-rs [![Latest Version](https://img.shields.io/crates/v/yt-sub.svg)](https://crates.io/crates/yt-sub) [![GH Actions](https://github.com/pawurb/yt-sub-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/pawurb/yt-sub-rs/actions)
 
-yt-sub is a simple CLI for subscribing to YouTube RSS feeds without using a YouTube account, powered by [CloudFlare Workers](https://workers.cloudflare.com/) backend. Receive Slack notifications about fresh videos based on the configurable schedule.
+yt-sub is a simple CLI for subscribing to YouTube RSS feeds without using a YouTube account. Receive Slack notifications about fresh videos based on the configurable schedule.
 
 ## Usage
 
