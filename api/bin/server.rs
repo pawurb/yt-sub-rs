@@ -1,3 +1,5 @@
+use std::net::TcpListener;
+
 use eyre::Result;
 use tracing::info;
 use yt_sub_api::{
@@ -19,9 +21,16 @@ async fn main() -> Result<()> {
     let app = app(conn).await.layer(middleware());
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+
+    if TcpListener::bind(format!("0.0.0.0:{port}")).is_err() {
+        tracing::error!("Port {} is already in use", port);
+        std::process::exit(1);
+    }
+
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
+
     info!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 
