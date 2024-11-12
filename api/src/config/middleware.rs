@@ -39,9 +39,15 @@ pub async fn only_ssl(request: Request, next: Next) -> Response {
     if ssl {
         next.run(request).await
     } else {
+        let authority = request
+            .headers()
+            .get("host")
+            .and_then(|header| header.to_str().ok())
+            .unwrap_or("localhost");
+
         let uri = Uri::builder()
             .scheme("https")
-            .authority(request.uri().authority().unwrap().clone())
+            .authority(authority)
             .path_and_query(request.uri().path_and_query().unwrap().clone())
             .build()
             .unwrap();
