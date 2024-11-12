@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use axum::{
     extract::Request,
-    http::Uri,
+    http::{HeaderValue, Uri},
     middleware::Next,
     response::{IntoResponse, Response},
 };
@@ -27,6 +27,28 @@ pub fn logging() -> tower_http::trace::TraceLayer<
 
 pub fn timeout() -> TimeoutLayer {
     TimeoutLayer::new(Duration::from_secs(10))
+}
+
+pub async fn security_headers(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+
+    response.headers_mut().insert(
+        "X-Content-Type-Options",
+        HeaderValue::from_static("nosniff"),
+    );
+    response
+        .headers_mut()
+        .insert("X-Frame-Options", HeaderValue::from_static("SAMEORIGIN"));
+    response.headers_mut().insert(
+        "referrer-policy",
+        HeaderValue::from_static("no-referrer-when-downgrade"),
+    );
+    response.headers_mut().insert(
+        "Strict-Transport-Security",
+        HeaderValue::from_static("Strict-Transport-Security: max-age=31536000; includeSubDomains"),
+    );
+
+    response
 }
 
 pub async fn only_ssl(request: Request, next: Next) -> Response {
