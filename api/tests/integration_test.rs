@@ -5,7 +5,7 @@ use serde_json::Value;
 async fn test_get_channel_data() {
     let client = Client::new();
     let res = client
-        .get("https://frog02-20771.wykr.es/channel_data/@ManOfRecaps")
+        .get("https://ytsub.apki.io/channel_data/@ManOfRecaps")
         .send()
         .await
         .expect("Failed to send request");
@@ -20,7 +20,7 @@ async fn test_get_channel_data() {
 async fn test_invalid_channel_data() {
     let client = Client::new();
     let res = client
-        .get("https://frog02-20771.wykr.es/channel_data/@kljjfadslufd")
+        .get("https://ytsub.apki.io/channel_data/@kljjfadslufd")
         .send()
         .await
         .expect("Failed to send request");
@@ -31,7 +31,7 @@ async fn test_invalid_channel_data() {
 async fn test_missing_handle() {
     let client = Client::new();
     let res = client
-        .get("https://frog02-20771.wykr.es/channel_data")
+        .get("https://ytsub.apki.io/channel_data")
         .send()
         .await
         .expect("Failed to send request");
@@ -42,7 +42,7 @@ async fn test_missing_handle() {
 async fn test_failed_register() {
     let client = Client::new();
     let res = client
-        .post("https://frog02-20771.wykr.es/account")
+        .post("https://ytsub.apki.io/account")
         .send()
         .await
         .expect("Failed to send request");
@@ -53,7 +53,7 @@ async fn test_failed_register() {
 async fn test_failed_unregister() {
     let client = Client::new();
     let res = client
-        .delete("https://frog02-20771.wykr.es/account")
+        .delete("https://ytsub.apki.io/account")
         .send()
         .await
         .expect("Failed to send request");

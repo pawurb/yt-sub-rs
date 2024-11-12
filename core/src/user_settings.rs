@@ -6,7 +6,7 @@ use std::{
 
 use crate::{channel::Channel, notifier::Notifier};
 
-pub const API_HOST: &str = "https://frog02-20771.wykr.es";
+pub const API_HOST: &str = "https://ytsub.apki.io";
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct UserSettings {

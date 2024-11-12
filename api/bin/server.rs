@@ -1,24 +1,26 @@
 use std::net::TcpListener;
 
+use axum::middleware::from_fn;
 use eyre::Result;
 use tracing::info;
 use yt_sub_api::{
-    config::{
-        middleware::{init_logs, middleware},
-        routes::app,
-    },
+    config::{middleware, routes::app},
     lite_helpers::{init_lite_db, sqlite_conn},
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    init_logs("server.log");
+    middleware::init_logs("server.log");
 
     init_lite_db(None).await.expect("Failed to init sqlite db");
     let conn = sqlite_conn(None)
         .await
         .expect("Failed to connect to sqlite db");
-    let app = app(conn).await.layer(middleware());
+    let app = app(conn)
+        .await
+        .layer(middleware::logging())
+        .layer(middleware::timeout())
+        .layer(from_fn(middleware::only_ssl));
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
 
