@@ -1,6 +1,7 @@
 use axum::middleware::from_fn;
 use eyre::Result;
 use std::net::TcpListener;
+use tower_http::compression::CompressionLayer;
 use tracing::info;
 use yt_sub_api::{
     config::{middleware, routes::app},
@@ -28,6 +29,7 @@ async fn run() -> Result<()> {
         .layer(middleware::logging())
         .layer(middleware::timeout())
         .layer(from_fn(middleware::only_ssl))
+        .layer(CompressionLayer::new())
         .layer(from_fn(middleware::security_headers));
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());

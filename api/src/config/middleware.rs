@@ -17,6 +17,28 @@ use tower_http::{
 use tracing::Level;
 use tracing_subscriber::fmt::time::OffsetTime;
 
+#[derive(Debug, PartialEq)]
+enum Env {
+    Development,
+    Production,
+    Test,
+}
+
+impl Env {
+    fn current() -> Self {
+        match std::env::var("ENV").expect("ENV is not set").as_str() {
+            "development" => Self::Development,
+            "production" => Self::Production,
+            "test" => Self::Test,
+            _ => panic!("Invalid ENV"),
+        }
+    }
+
+    fn is_dev(&self) -> bool {
+        self == &Self::Development
+    }
+}
+
 pub fn logging() -> tower_http::trace::TraceLayer<
     tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>,
 > {
@@ -58,7 +80,7 @@ pub async fn only_ssl(request: Request, next: Next) -> Response {
         .and_then(|header| header.to_str().ok())
         == Some("true");
 
-    if ssl {
+    if ssl || Env::current().is_dev() {
         next.run(request).await
     } else {
         let authority = request
