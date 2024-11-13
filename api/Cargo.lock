@@ -3038,9 +3038,9 @@ dependencies = [
 
 [[package]]
 name = "yt-sub-core"
-version = "0.1.6"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5721312373c7f0676cb7805d22319f16026f4f67007785bd3c9eaed9b400ef1"
+checksum = "9ca59c2ecd52ea7b0ed495d6a90d483e1b879604fd22eaa5f7246978d99ca20c"
 dependencies = [
  "chrono",
  "env_logger",

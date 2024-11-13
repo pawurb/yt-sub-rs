@@ -22,7 +22,7 @@ lto = true
 
 [dependencies]
 serde_json = "1.0.128"
-yt-sub-core = "0.1.6"
+yt-sub-core = "0.2.2"
 # yt-sub-core = { path = "../core" }
 eyre = "0.6.12"
 uuid = { version = "1.11.0", features = ["v4", "js"] }
