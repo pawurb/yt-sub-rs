@@ -45,6 +45,7 @@ tower-http = { version = "0.6.1", features = [
   "compression-gzip",
   "compression-br",
   "compression-deflate",
+  "catch-panic",
 ] }
 tower = "0.5.1"
 futures = "0.3.31"

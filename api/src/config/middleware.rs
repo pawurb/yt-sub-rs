@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use axum::{
     extract::Request,
     http::{HeaderValue, Uri},
@@ -10,10 +8,7 @@ use axum::{
 use reqwest::StatusCode;
 use time::UtcOffset;
 
-use tower_http::{
-    timeout::TimeoutLayer,
-    trace::{self, TraceLayer},
-};
+use tower_http::trace::{self, TraceLayer};
 use tracing::Level;
 use tracing_subscriber::fmt::time::OffsetTime;
 
@@ -45,10 +40,6 @@ pub fn logging() -> tower_http::trace::TraceLayer<
     TraceLayer::new_for_http()
         .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
         .on_response(trace::DefaultOnResponse::new().level(Level::INFO))
-}
-
-pub fn timeout() -> TimeoutLayer {
-    TimeoutLayer::new(Duration::from_secs(10))
 }
 
 pub async fn security_headers(request: Request, next: Next) -> Response {
