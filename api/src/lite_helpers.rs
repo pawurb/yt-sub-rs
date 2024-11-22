@@ -94,19 +94,31 @@ impl UserRow {
         Ok(exists)
     }
 
+    pub async fn update_last_run_at(
+        id: &str,
+        last_run_at: DateTime<Utc>,
+        conn: &SqlitePool,
+    ) -> Result<()> {
+        sqlx::query("UPDATE users SET last_run_at = ? WHERE id = ?")
+            .bind(last_run_at)
+            .bind(id)
+            .execute(conn)
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn save(&self, conn: &SqlitePool) -> Result<()> {
         if Self::exists(self.id.as_str(), conn).await? {
-            sqlx::query("UPDATE users SET settings_json = ?, last_run_at = ? WHERE id = ?")
+            sqlx::query("UPDATE users SET settings_json = ? WHERE id = ?")
                 .bind(self.settings_json.to_string())
-                .bind(self.last_run_at)
                 .bind(self.id.clone())
                 .execute(conn)
                 .await?;
         } else {
-            sqlx::query("INSERT INTO users (id, settings_json, last_run_at) VALUES (?, ?, ?)")
+            sqlx::query("INSERT INTO users (id, settings_json) VALUES (?, ?)")
                 .bind(self.id.clone())
                 .bind(self.settings_json.to_string())
-                .bind(self.last_run_at)
                 .execute(conn)
                 .await?;
         }

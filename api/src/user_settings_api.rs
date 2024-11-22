@@ -9,11 +9,13 @@ use crate::lite_helpers::UserRow;
 pub trait UserSettingsAPI {
     fn api_key(&self) -> String;
     async fn read(api_key: &str, conn: &SqlitePool) -> Result<UserSettings>;
-    async fn last_run_at(&self, conn: &SqlitePool) -> Result<DateTime<Utc>>;
-    async fn touch_last_run_at(self, conn: &SqlitePool) -> Result<()>;
+    async fn last_run_at(&self, conn: &SqlitePool) -> Result<Option<DateTime<Utc>>>;
+    async fn update_last_run_at(self, when: Option<DateTime<Utc>>, conn: &SqlitePool)
+        -> Result<()>;
     async fn ids(conn: &SqlitePool) -> Result<Vec<String>>;
     async fn save(&self, conn: &SqlitePool) -> Result<()>;
     async fn delete(api_key: &str, conn: &SqlitePool) -> Result<()>;
+    fn default_last_run_at() -> DateTime<Utc>;
 }
 
 impl UserSettingsAPI for UserSettings {
@@ -69,23 +71,26 @@ impl UserSettingsAPI for UserSettings {
         Ok(())
     }
 
-    async fn last_run_at(&self, conn: &SqlitePool) -> Result<DateTime<Utc>> {
+    async fn last_run_at(&self, conn: &SqlitePool) -> Result<Option<DateTime<Utc>>> {
         let row = UserRow::get(&self.api_key(), conn)
             .await?
             .ok_or_eyre("No settings found for user")?;
 
-        Ok(row
-            .last_run_at
-            .unwrap_or_else(|| Utc::now() - Duration::days(7)))
+        Ok(row.last_run_at)
     }
 
-    async fn touch_last_run_at(self, conn: &SqlitePool) -> Result<()> {
-        let updated = UserRow {
-            id: self.api_key(),
-            settings_json: serde_json::to_string(&self)?,
-            last_run_at: Some(Utc::now()),
-        };
-        updated.save(conn).await?;
+    fn default_last_run_at() -> DateTime<Utc> {
+        Utc::now() - Duration::days(7)
+    }
+
+    async fn update_last_run_at(
+        self,
+        when: Option<DateTime<Utc>>,
+        conn: &SqlitePool,
+    ) -> Result<()> {
+        let last_run_at = when.unwrap_or(UserSettings::default_last_run_at());
+
+        UserRow::update_last_run_at(&self.api_key(), last_run_at, conn).await?;
 
         Ok(())
     }
@@ -125,14 +130,27 @@ mod tests {
         let settings = build_settings(true, None);
         settings.save(&conn).await?;
 
-        assert!(settings.last_run_at(&conn).await? < Utc::now() - Duration::days(6));
+        assert!(settings.last_run_at(&conn).await?.is_none());
 
         let api_key = settings.api_key();
-        settings.touch_last_run_at(&conn).await?;
+        settings.update_last_run_at(Some(Utc::now()), &conn).await?;
 
         let settings = UserSettings::read(&api_key, &conn).await?;
 
-        assert!(settings.last_run_at(&conn).await? > Utc::now() - Duration::hours(1));
+        assert!(settings.last_run_at(&conn).await?.unwrap() > Utc::now() - Duration::hours(1));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_save_settings() -> Result<()> {
+        let (conn, _cl) = setup_test_db().await;
+
+        let settings = build_settings(true, None);
+        settings.save(&conn).await?;
+
+        let settings = UserSettings::read(&settings.api_key(), &conn).await?;
+        settings.save(&conn).await?;
+
         Ok(())
     }
 

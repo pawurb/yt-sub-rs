@@ -36,7 +36,11 @@ async fn check_videos(api_key: String) -> Result<()> {
         return Ok(());
     }
 
-    let last_run_at = settings.last_run_at(&conn).await?;
+    let last_run_at = settings
+        .last_run_at(&conn)
+        .await?
+        .unwrap_or(UserSettings::default_last_run_at());
+
     let mut new_videos = vec![];
 
     for channel in &settings.channels {
@@ -51,6 +55,7 @@ async fn check_videos(api_key: String) -> Result<()> {
     }
 
     if new_videos.is_empty() {
+        settings.update_last_run_at(Some(Utc::now()), &conn).await?;
         return Ok(());
     }
 
@@ -68,7 +73,7 @@ async fn check_videos(api_key: String) -> Result<()> {
         }
     }
 
-    settings.touch_last_run_at(&conn).await?;
+    settings.update_last_run_at(Some(Utc::now()), &conn).await?;
 
     Ok(())
 }
