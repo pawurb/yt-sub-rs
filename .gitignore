@@ -1,4 +1,4 @@
-*/target
+/target
 *.db-shm
 *.db
 *.db-wal
