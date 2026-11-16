@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use eyre::Result;
 use yt_sub::user_settings_cli::UserSettingsCLI;
-use yt_sub_core::UserSettings;
+use yt_sub::UserSettings;
 
 use crate::CONFIG_DESC;
 
@@ -25,7 +25,7 @@ impl UnfollowArgs {
         let to_unfollow = settings.get_channel_by_handle(&handle);
 
         if to_unfollow.is_none() {
-            eyre::bail!("You are not following a channel with the provided handle!")
+            eyre::bail!("You are not following a channel with the provided handle!");
         }
 
         let to_unfollow = to_unfollow.unwrap();
@@ -43,17 +43,6 @@ impl UnfollowArgs {
         settings.save(config.as_ref())?;
 
         println!("You've unfollowed {desc}!", desc = to_unfollow.description);
-
-        if settings.api_key.is_some() {
-            match settings.sync_account(None).await {
-                Ok(_) => {
-                    println!("Remote account data was updated.");
-                }
-                Err(e) => {
-                    eprintln!("Error: {}", e)
-                }
-            }
-        }
 
         Ok(())
     }

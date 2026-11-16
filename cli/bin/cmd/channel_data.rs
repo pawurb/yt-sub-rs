@@ -1,17 +1,26 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use eyre::Result;
-use yt_sub_core::channel::Channel;
+use yt_sub::{channel::Channel, user_settings_cli::UserSettingsCLI, UserSettings};
+
+use crate::CONFIG_DESC;
 
 #[derive(Debug, Parser)]
 pub struct ChannelDataArgs {
+    #[arg(long, help = CONFIG_DESC)]
+    config: Option<PathBuf>,
+
     #[arg(long)]
     handle: String,
 }
 
 impl ChannelDataArgs {
     pub async fn run(self) -> Result<()> {
-        let Self { handle } = self;
-        let (channel_id, channel_name) = Channel::get_data(&handle, None).await?;
+        let Self { config, handle } = self;
+        let settings = UserSettings::read(config.as_ref())?;
+        let (channel_id, channel_name) =
+            Channel::get_data(&handle, settings.youtube_api_key()?, None).await?;
 
         let channel = Channel {
             handle: handle.clone(),

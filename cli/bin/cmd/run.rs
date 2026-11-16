@@ -3,7 +3,7 @@ use clap::Parser;
 use eyre::Result;
 use std::path::PathBuf;
 use yt_sub::user_settings_cli::UserSettingsCLI;
-use yt_sub_core::{logger::Logger, UserSettings};
+use yt_sub::{logger::Logger, UserSettings};
 
 use crate::CONFIG_DESC;
 

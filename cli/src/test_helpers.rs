@@ -7,7 +7,7 @@ use home::home_dir;
 use uuid::Uuid;
 
 use crate::user_settings_cli::UserSettingsCLI;
-use yt_sub_core::UserSettings;
+use crate::UserSettings;
 
 pub fn test_config_path() -> PathBuf {
     let uuid = Uuid::new_v4();

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use eyre::Result;
 use yt_sub::user_settings_cli::UserSettingsCLI;
-use yt_sub_core::{channel::Channel, UserSettings};
+use yt_sub::{channel::Channel, UserSettings};
 
 use crate::CONFIG_DESC;
 
@@ -33,13 +33,13 @@ impl FollowArgs {
             eyre::bail!("You must provide only --handle or both --channel-id and --desc");
         }
 
-        let (channel_id, desc) = if channel_id.is_none() && desc.is_none() {
-            Channel::get_data(&handle, None).await?
-        } else {
-            (channel_id.unwrap(), desc.unwrap())
+        let settings = UserSettings::read(config.as_ref())?;
+
+        let (channel_id, desc) = match (channel_id, desc) {
+            (Some(channel_id), Some(desc)) => (channel_id, desc),
+            _ => Channel::get_data(&handle, settings.youtube_api_key()?, None).await?,
         };
 
-        let settings = UserSettings::read(config.as_ref())?;
         let already_following_id = settings.get_channel_by_id(&channel_id);
         let already_following_handle = settings.get_channel_by_handle(&handle);
 
@@ -75,17 +75,6 @@ impl FollowArgs {
 
 {channel}"
         );
-
-        if settings.api_key.is_some() {
-            match settings.sync_account(None).await {
-                Ok(_) => {
-                    println!("Remote account data was updated.");
-                }
-                Err(e) => {
-                    eprintln!("Error: {}", e)
-                }
-            }
-        }
 
         Ok(())
     }

@@ -1,6 +1,6 @@
 # yt-sub-rs [![Latest Version](https://img.shields.io/crates/v/yt-sub.svg)](https://crates.io/crates/yt-sub) [![GH Actions](https://github.com/pawurb/yt-sub-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/pawurb/yt-sub-rs/actions)
 
-yt-sub is a simple CLI for subscribing to YouTube RSS feeds without using a YouTube account. Receive Slack notifications about fresh videos based on the configurable schedule.
+yt-sub is a simple CLI for subscribing to YouTube RSS feeds without using a YouTube account. Receive Slack notifications about fresh videos, e.g. by running it periodically via CRON.
 
 ## Usage
 
@@ -17,9 +17,6 @@ Commands:
   follow        Subscribe to a channel [aliases: f]
   unfollow      Unsubscribe [aliases: u]
   list          List followed channels [aliases: l]
-  register      Register remote account [aliases: re]
-  unregister    Remove remote account [aliases: un]
-  sync          Update remote settings to match local [aliases: sc]
   help          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -46,6 +43,8 @@ channels = []
 [[notifiers]]
 Log = []
 ```
+
+To follow channels by their handle, add your own [YouTube Data API v3 key](https://developers.google.com/youtube/v3/getting-started) to the config file (see [YouTube API key](#youtube-api-key)).
 
 Follow preferred channels based on [their URL handle](https://support.google.com/youtube/answer/11585688?sjid=4360661106629707574-EU):
 
@@ -93,41 +92,17 @@ You can unfollow a channel by typing:
 ytsub unfollow --handle @ManofRecaps
 ```
 
-## Remote account
+## YouTube API key
 
-By registering a remote account, you'll receive Slack notifications about new videos without executting the CLI locally.
-
-To do it run:
-
-```bash
-ytsub register
-```
-
-it will persist your API key in the config file. You must configure Slack notifications to use this feature. 
-
-If your account is registered `follow` and `unfollow` commands will automatically update your remote data. If you change the config file manually, you have to run:
-
-```bash
-ytsub sync
-```
-
-By default, new videos are checked once every hour. Optionally, you can define a notification schedule like this:
+`follow --handle` and `channel-data` resolve a channel handle to its RSS `channel_id` by calling the YouTube Data API v3 directly. Create an API key in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the YouTube Data API v3 enabled, and add it to the config:
 
 `~/.config/yt-sub-rs/config.toml`
 
 ```toml
-schedule = [8, 20]
+youtube_api_key = "YOUR_API_KEY"
 ```
 
-Numbers represent UTC hours when notifications should be sent.
-
-Don't forget to run `sync` after updating this config.
-
-You can remove all your remote data by running:
-
-```bash
-ytsub unregister
-```
+The key is not needed if you provide `--channel-id` and `--desc` manually, or for `run`.
 
 ## Notifiers configuration
 
@@ -149,7 +124,7 @@ You can obtain the `webhook_url` value as described [in the Slack docs](https://
 
 ## Manually finding an RSS `channel_id`
 
-CLI will try to find the matching `channel_id` based on the URL handle. But proxied YouTube API calls are sometimes throttled. So if the `follow` command fails, you have to obtain this data manually. Go to the [channel videos tab](https://www.youtube.com/@ManofRecaps/videos) and run this JS in the console to extract the RSS `channel_id`:
+Without a `youtube_api_key`, or if the YouTube API request fails, you can obtain this data manually. Go to the [channel videos tab](https://www.youtube.com/@ManofRecaps/videos) and run this JS in the console to extract the RSS `channel_id`:
 
 ```javascript
 document.querySelector('link[rel="alternate"][type="application/rss+xml"]').href.match(/channel_id=([^&]+)/)[1];
@@ -167,7 +142,7 @@ ytsub follow --handle @ManofRecaps --channel-id UCNCTxLZ3EKKry-oWgLlsYsw --desc 
 
 ## CRON invocation
 
-Alternatively, you can use the CLI via the CRON scheduler to receive notifications without a remote account. By appending the `--cron` flag to the `run` command CLI will output the logs with timestamps:
+You can run the CLI via the CRON scheduler to receive notifications periodically. By appending the `--cron` flag to the `run` command CLI will output the logs with timestamps:
 
 ```
 RUST_LOG=info ytsub run --cron

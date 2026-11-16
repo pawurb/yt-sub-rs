@@ -1,3 +1,4 @@
+use eyre::{OptionExt, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display, Formatter},
@@ -6,16 +7,13 @@ use std::{
 
 use crate::{channel::Channel, notifier::Notifier};
 
-pub const API_HOST: &str = "https://ytsub.apki.io";
-
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct UserSettings {
     pub channels: Vec<Channel>,
     pub notifiers: Vec<Notifier>,
-    pub api_key: Option<String>,
+    pub youtube_api_key: Option<String>,
     #[serde(skip_serializing, skip_deserializing)]
     pub path: PathBuf,
-    pub schedule: Option<Vec<u32>>,
 }
 
 impl Display for UserSettings {
@@ -31,8 +29,7 @@ impl UserSettings {
             path,
             notifiers: vec![Notifier::default()],
             channels: vec![],
-            api_key: None,
-            schedule: None,
+            youtube_api_key: None,
         }
     }
 
@@ -50,22 +47,12 @@ impl UserSettings {
             .cloned()
     }
 
-    pub fn get_slack_notifier(&self) -> Option<&Notifier> {
-        self.notifiers.iter().find(|n| n.is_slack())
-    }
-}
+    pub fn youtube_api_key(&self) -> Result<&str> {
+        self.youtube_api_key.as_deref().ok_or_eyre(
+            "Missing 'youtube_api_key' in the config file. It is required to look up a channel by its handle:
+https://github.com/pawurb/yt-sub-rs#youtube-api-key
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use eyre::Result;
-    #[tokio::test]
-    async fn test_json_serialize() -> Result<()> {
-        let setting = UserSettings::default(PathBuf::from("test.toml"));
-        let json = serde_json::to_string(&setting)?;
-
-        let _setting: UserSettings = serde_json::from_str(&json)?;
-
-        Ok(())
+Alternatively, provide --channel-id and --desc manually.",
+        )
     }
 }

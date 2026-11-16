@@ -2,7 +2,7 @@ use clap::Parser;
 use eyre::Result;
 use std::path::PathBuf;
 use yt_sub::user_settings_cli::UserSettingsCLI;
-use yt_sub_core::UserSettings;
+use yt_sub::UserSettings;
 
 use crate::CONFIG_DESC;
 

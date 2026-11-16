@@ -42,10 +42,6 @@ impl Notifier {
             Notifier::Telegram => todo!(),
         }
     }
-
-    pub fn is_slack(&self) -> bool {
-        matches!(self, Notifier::Slack(_))
-    }
 }
 
 async fn notify_slack(message: &str, config: &SlackConfig) -> Result<()> {
@@ -71,4 +67,63 @@ async fn notify_slack(message: &str, config: &SlackConfig) -> Result<()> {
 
     let err_msg = res.text().await?;
     eyre::bail!("Failed to send message to Slack: {err_msg}");
+}
+
+#[cfg(test)]
+mod tests {
+    use mockito::{Matcher, Server};
+    use serde_json::json;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_notify_slack() -> Result<()> {
+        let mut server = Server::new_async().await;
+        let notifier = Notifier::Slack(SlackConfig {
+            webhook_url: format!("{}/services/XXX", server.url()),
+            channel: "yt-videos".to_string(),
+        });
+
+        let m = server
+            .mock("POST", "/services/XXX")
+            .match_body(Matcher::PartialJson(json!({
+                "channel": "yt-videos",
+                "text": "first\n\nsecond",
+            })))
+            .with_status(200)
+            .create_async()
+            .await;
+
+        notifier
+            .notify(vec!["first".to_string(), "second".to_string()], false)
+            .await?;
+
+        m.assert_async().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_notify_slack_error() -> Result<()> {
+        let mut server = Server::new_async().await;
+        let notifier = Notifier::Slack(SlackConfig {
+            webhook_url: format!("{}/services/XXX", server.url()),
+            channel: "yt-videos".to_string(),
+        });
+
+        let m = server
+            .mock("POST", "/services/XXX")
+            .with_status(404)
+            .with_body("no_service")
+            .create_async()
+            .await;
+
+        let err = notifier
+            .notify(vec!["msg".to_string()], false)
+            .await
+            .expect_err("Slack error should propagate");
+        assert!(err.to_string().contains("no_service"));
+
+        m.assert_async().await;
+        Ok(())
+    }
 }
